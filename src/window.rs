@@ -12,7 +12,6 @@ use imgui_winit_support::winit::{
     window::{Window, WindowAttributes},
 };
 use raw_window_handle::HasWindowHandle;
-use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::WindowButtons;
 use crate::util::{load_icon, ICON_256, ICON_32};
 
@@ -29,11 +28,23 @@ pub fn create_window() -> (
     let event_loop = EventLoop::new().unwrap();
 
     let window_icon = load_icon(ICON_32);
+
+    #[cfg(target_os = "windows")]
     let taskbar_icon = load_icon(ICON_256);
+    #[cfg(target_os = "windows")]
     let window_attributes = WindowAttributes::default()
         .with_title(TITLE)
         .with_window_icon(window_icon)
         .with_taskbar_icon(taskbar_icon)
+        .with_inner_size(LogicalSize::new(1024, 768))
+        .with_resizable(false)
+        .with_maximized(false)
+        .with_enabled_buttons(WindowButtons::all() & !WindowButtons::MAXIMIZE);
+
+    #[cfg(target_os = "linux")]
+    let window_attributes = WindowAttributes::default()
+        .with_title(TITLE)
+        .with_window_icon(window_icon)
         .with_inner_size(LogicalSize::new(1024, 768))
         .with_resizable(false)
         .with_maximized(false)
