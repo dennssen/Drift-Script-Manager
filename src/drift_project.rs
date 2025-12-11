@@ -268,7 +268,7 @@ impl DriftProject {
         let new_directory = self.script_path.parent().unwrap().join(&self.package_info.script_name);
 
         if let Err(e) = fs::rename(&self.script_path, &new_directory) {
-            error_dialog("Rename Failure", "Failed to rename script directory to script name");
+            warn_dialog("Rename Failure", "Failed to rename script directory to script name");
             return Err(format!("Failed to rename script directory to script name\n{}", e))
         }
 
