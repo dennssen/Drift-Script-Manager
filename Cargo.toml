@@ -1,0 +1,30 @@
+[package]
+name = "Drift-Script-Manager"
+version = "0.1.0"
+edition = "2024"
+include = ["assets/", "src/", "Cargo.toml"]
+
+[dependencies]
+imgui = "0.12.0"
+imgui-winit-support = "0.13.0"
+imgui-glow-renderer = "0.13.0"
+winit = "0.30.0"
+glow = "0.14.0"
+glutin = "0.32.0"
+glutin-winit = "0.5.0"
+raw-window-handle = "0.6.0"
+
+rfd = "0.16.0"
+serde = { version = "1.0.228", features = ["derive"]}
+serde_json = "1.0.145"
+dirs = "6.0.0"
+capitalize = "0.3.4"
+opener = "0.8.3"
+zip = "3.0.0"
+zip-extensions = "0.9.1"
+include_dir = "0.7.0"
+regex = "1.12.2"
+image = "0.25.9"
+
+[build-dependencies]
+winresource = "0.1.28"
