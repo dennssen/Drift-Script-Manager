@@ -11,6 +11,8 @@ use imgui_winit_support::winit::{
     event_loop::EventLoop,
     window::{Window, WindowAttributes},
 };
+#[cfg(target_os = "windows")]
+use winit::platform::windows::WindowAttributesExtWindows;
 use raw_window_handle::HasWindowHandle;
 use winit::window::WindowButtons;
 use crate::util::{load_icon, ICON_256, ICON_32};
