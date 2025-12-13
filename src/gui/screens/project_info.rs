@@ -1,12 +1,10 @@
 use imgui::{ItemHoveredFlags, Ui};
 use std::sync::{Mutex};
 
-use crate::util;
-use util::create_imgui_window;
-use crate::fonts::Fonts;
-use crate::drift_project::{DriftProject};
+use crate::utils::ui_helpers::{create_imgui_window, keyword_list_box};
+use crate::gui::fonts::Fonts;
+use crate::project::drift_project::{DriftProject};
 use crate::gui::ScreenState;
-use crate::util::keyword_list_box;
 
 static SEARCH_FILTER: Mutex<String> = Mutex::new(String::new());
 

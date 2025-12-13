@@ -1,8 +1,8 @@
 use imgui::Ui;
-use crate::drift_project::DriftProject;
-use crate::fonts::Fonts;
+use crate::project::drift_project::DriftProject;
+use crate::gui::fonts::Fonts;
 use crate::gui::{BuildData, ScreenState};
-use crate::util::{create_imgui_window, directory_input};
+use crate::utils::ui_helpers::{create_imgui_window, directory_input};
 
 pub fn build_project_screen(ui: &Ui, screen_state: &mut ScreenState, build_data: &mut BuildData, project: &mut DriftProject, fonts: &Fonts) {
     create_imgui_window(ui, "Building Project...")

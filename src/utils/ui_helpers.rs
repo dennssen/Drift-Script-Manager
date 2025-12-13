@@ -2,38 +2,17 @@ use std::ffi::CString;
 use std::path::PathBuf;
 use std::ptr::null;
 use imgui::{FontSource, Ui, Window};
-use imgui_winit_support::winit::window::Window as WinitWindow;
-use rfd::{FileDialog, MessageButtons, MessageDialog, MessageLevel};
-use std::sync::{Arc, Mutex};
 use imgui::sys::{igBeginListBox, igCalcTextSize, igEndListBox, igGetWindowWidth, igSelectable_Bool, ImVec2};
-use winit::window::Icon;
-use crate::data_manager::get_app_data;
+use rfd::FileDialog;
+use crate::managers::data::get_app_data;
 
-const FONT_PATH: &[u8] = include_bytes!("../assets/fonts/Roboto-VariableFont_wdth,wght.ttf");
-pub const ICON_256: &[u8] = include_bytes!("../assets/logo/256.png");
-pub const ICON_32: &[u8] = include_bytes!("../assets/logo/32.png");
-pub static WINDOW: Mutex<Option<Arc<WinitWindow>>> = Mutex::new(None);
+const FONT_PATH: &[u8] = include_bytes!("../../assets/fonts/Roboto-VariableFont_wdth,wght.ttf");
 
 pub fn roboto_font(font_size: f32) -> FontSource<'static> {
     FontSource::TtfData {
         data: FONT_PATH,
         size_pixels: font_size,
         config: None
-    }
-}
-
-pub fn load_icon(bytes: &[u8]) -> Option<Icon> {
-    let (icon_rgba, icon_width, icon_height) = {
-        let image = image::load_from_memory(bytes).unwrap().into_rgba8();
-        let (width, height) = image.dimensions();
-        let rgba = image.into_raw();
-        (rgba, width, height)
-    };
-    let result = Icon::from_rgba(icon_rgba, icon_width, icon_height);
-    if let Err(_) = result {
-        None
-    } else {
-        Some(result.unwrap())
     }
 }
 
@@ -66,7 +45,7 @@ pub fn directory_input(ui: &Ui, label: &str, directory_path: &mut PathBuf) {
     if ui.button("/") {
         let new_directory = FileDialog::new()
             .pick_folder();
-        
+
         if new_directory.is_some() {
             *directory_path = new_directory.unwrap();
         }
@@ -125,26 +104,5 @@ pub unsafe fn keyword_list_box(
 
             igEndListBox();
         }
-    }
-}
-
-pub fn error_dialog(title: &str, description: &str) {
-    message_dialog(title, description, MessageLevel::Error);
-}
-
-pub fn warn_dialog(title: &str, description: &str) {
-    message_dialog(title, description, MessageLevel::Warning);
-}
-
-fn message_dialog(title: &str, description: &str, level: MessageLevel) {
-    let window_lock = WINDOW.lock().unwrap();
-    if let Some(window) = window_lock.as_ref() {
-        MessageDialog::new()
-            .set_level(level)
-            .set_title(title)
-            .set_description(description)
-            .set_buttons(MessageButtons::Ok)
-            .set_parent(window.as_ref())
-            .show();
     }
 }

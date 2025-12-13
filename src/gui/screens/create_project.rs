@@ -1,11 +1,12 @@
 use std::io;
 use imgui::{ItemHoveredFlags, Ui};
-use crate::drift_project::DriftProject;
-use crate::fonts::Fonts;
-use crate::git_manager::has_git;
+use crate::project::drift_project::DriftProject;
+use crate::gui::fonts::Fonts;
+use crate::managers;
+use managers::git::has_git;
+use managers::template::{get_custom_templates, EmbeddedTemplate, Template};
 use crate::gui::{CreateData, ScreenState};
-use crate::template_manager::{get_custom_templates, EmbeddedTemplate, Template};
-use crate::util::{create_imgui_window, directory_input};
+use crate::utils::ui_helpers::{create_imgui_window, directory_input};
 
 pub fn create_project_screen(ui: &Ui, screen_state: &mut ScreenState, create_data: &mut CreateData, project: &mut DriftProject, fonts: &Fonts) -> io::Result<()> {
     create_imgui_window(ui, "Creating Project...")

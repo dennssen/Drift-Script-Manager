@@ -7,19 +7,13 @@ use std::time::Instant;
 use glow::HasContext;
 use glutin::surface::GlSurface;
 
-mod window;
-mod imgui_setup;
 mod gui;
-mod util;
-mod fonts;
-mod drift_project;
-mod data_manager;
-mod git_manager;
-mod template_manager;
+mod managers;
+mod project;
+mod utils;
 
-use window::create_window;
-use imgui_setup::imgui_init;
-use crate::data_manager::{get_app_data, AppData};
+use gui::setup::{imgui_init, create_window, glow_context};
+use managers::data::{get_app_data, AppData};
 
 fn main() {
     // Common setup for creating a winit window and imgui context, not specifc
@@ -29,10 +23,10 @@ fn main() {
     let (mut winit_platform, mut imgui_context, fonts) = imgui_init(&window);
 
     let window = Arc::new(window);
-    *util::WINDOW.lock().unwrap() = Some(Arc::clone(&window));
+    *utils::dialogs::WINDOW.lock().unwrap() = Some(Arc::clone(&window));
 
     // OpenGL context from glow
-    let gl = window::glow_context(&context);
+    let gl = glow_context(&context);
 
     // OpenGL renderer from this crate
     let mut ig_renderer = imgui_glow_renderer::AutoRenderer::new(gl, &mut imgui_context)

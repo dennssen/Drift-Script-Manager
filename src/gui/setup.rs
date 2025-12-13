@@ -1,22 +1,20 @@
 use std::num::NonZeroU32;
-
-use glutin::{
-    config::ConfigTemplateBuilder,
-    context::{NotCurrentGlContext, ContextAttributesBuilder, PossiblyCurrentContext},
-    display::{GlDisplay, GetGlDisplay},
-    surface::{Surface, SurfaceAttributesBuilder, WindowSurface},
-};
-use imgui_winit_support::winit::{
-    dpi::LogicalSize,
-    event_loop::EventLoop,
-    window::{Window, WindowAttributes},
-};
-#[cfg(target_os = "windows")]
-use winit::platform::windows::WindowAttributesExtWindows;
+use glutin::config::ConfigTemplateBuilder;
+use glutin::context::{ContextAttributesBuilder, NotCurrentGlContext, PossiblyCurrentContext};
+use glutin::display::{GetGlDisplay, GlDisplay};
+use glutin::surface::{Surface, SurfaceAttributesBuilder, WindowSurface};
+use imgui::FontId;
+use imgui_winit_support::WinitPlatform;
 use raw_window_handle::HasWindowHandle;
-use winit::window::WindowButtons;
-use crate::util::{load_icon, ICON_256, ICON_32};
+use winit::dpi::LogicalSize;
+use winit::event_loop::EventLoop;
+use winit::window::{Icon, Window, WindowAttributes, WindowButtons};
+use crate::gui::fonts::Fonts;
+use crate::utils::ui_helpers::roboto_font;
 
+#[cfg(target_os = "windows")]
+const ICON_256: &[u8] = include_bytes!("../../assets/logo/256.png");
+const ICON_32: &[u8] = include_bytes!("../../assets/logo/32.png");
 const TITLE: &str = "Drift Script Manager";
 const INITIAL_WIDTH: u32 = 1024;
 const INITIAL_HEIGHT: u32 = 768;
@@ -91,5 +89,56 @@ pub fn create_window() -> (
 pub fn glow_context(context: &PossiblyCurrentContext) -> glow::Context {
     unsafe {
         glow::Context::from_loader_function_cstr(|s| context.display().get_proc_address(s).cast())
+    }
+}
+
+pub fn imgui_init(window: &Window) -> (WinitPlatform, imgui::Context, Fonts) {
+    let mut imgui_context = imgui::Context::create();
+    imgui_context.set_ini_filename(None);
+
+    let mut winit_platform = WinitPlatform::new(&mut imgui_context);
+    winit_platform.attach_window(
+        imgui_context.io_mut(),
+        window,
+        imgui_winit_support::HiDpiMode::Rounded,
+    );
+
+    let main_font: FontId = imgui_context
+        .fonts()
+        .add_font(&[roboto_font(26.0)]);
+    let title_font: FontId = imgui_context
+        .fonts()
+        .add_font(&[roboto_font(94.0)]);
+    let header_font: FontId = imgui_context
+        .fonts()
+        .add_font(&[roboto_font(64.0)]);
+    let big_font: FontId = imgui_context
+        .fonts()
+        .add_font(&[roboto_font(68.0)]);
+    let medium_font: FontId = imgui_context
+        .fonts()
+        .add_font(&[roboto_font(48.0)]);
+
+    let fonts: Fonts = Fonts::new(main_font, title_font, header_font, big_font, medium_font);
+    imgui_context.style_mut().frame_padding = [4.0, 6.0];
+    imgui_context.style_mut().item_spacing = [8.0, 5.0];
+    imgui_context.style_mut().frame_rounding = 4.0;
+    imgui_context.io_mut().font_global_scale = (1.0 / winit_platform.hidpi_factor()) as f32;
+
+    (winit_platform, imgui_context, fonts)
+}
+
+fn load_icon(bytes: &[u8]) -> Option<Icon> {
+    let (icon_rgba, icon_width, icon_height) = {
+        let image = image::load_from_memory(bytes).unwrap().into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        (rgba, width, height)
+    };
+    let result = Icon::from_rgba(icon_rgba, icon_width, icon_height);
+    if let Err(_) = result {
+        None
+    } else {
+        Some(result.unwrap())
     }
 }
