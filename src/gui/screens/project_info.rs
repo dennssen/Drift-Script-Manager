@@ -5,16 +5,24 @@ use crate::utils::ui_helpers::{create_imgui_window, keyword_list_box};
 use crate::gui::fonts::Fonts;
 use crate::project::drift_project::{DriftProject};
 use crate::gui::ScreenState;
+use crate::managers::data::get_app_data;
 
 static SEARCH_FILTER: Mutex<String> = Mutex::new(String::new());
 
-pub fn project_info_screen(ui: &mut Ui, screen_state: &mut ScreenState, drift_project: &mut DriftProject, new_project: bool, fonts: &Fonts) {
-    let (window_name, header) = if new_project {
-        ("Creating Project...", "New Project")
-    } else {
-        ("Editing Project...", "Edit Project")
-    };
+pub enum ProjectMode {
+    New,
+    Edit
+}
 
+pub fn project_info_screen(ui: &mut Ui, screen_state: &mut ScreenState, drift_project: &mut DriftProject, project_mode: ProjectMode, fonts: &Fonts) {
+    let (window_name, header) = match project_mode {
+        ProjectMode::New => {
+            ("Creating Project...", "New Project")
+        }
+        ProjectMode::Edit => {
+            ("Editing Project...", "Edit Project")
+        }
+    };
 
     create_imgui_window(&ui, window_name)
         .build(|| {
@@ -42,9 +50,12 @@ pub fn project_info_screen(ui: &mut Ui, screen_state: &mut ScreenState, drift_pr
 
             let mut search = SEARCH_FILTER.lock().unwrap();
 
-            unsafe {
-                keyword_list_box(ui, &mut search, &mut drift_project.package_info.keywords, "##KeywordsList", multiline_width, multiline_height);
-            }
+            let mut app_data = get_app_data().lock().unwrap();
+
+            keyword_list_box(ui, &mut search, &app_data.keywords.clone(), &mut drift_project.package_info.keywords, "##KeywordsList", multiline_width, multiline_height, |new_keyword| {
+                app_data.keywords.push(new_keyword);
+            });
+
             drop(search);
 
             ui.new_line();
@@ -53,31 +64,33 @@ pub fn project_info_screen(ui: &mut Ui, screen_state: &mut ScreenState, drift_pr
                 *screen_state = ScreenState::MainMenu;
             }
             ui.same_line();
-            if new_project {
-                let sufficient = drift_project.has_sufficient_info();
-                let is_disabled: bool = sufficient.is_err();
 
-                let disabled = ui.begin_disabled(is_disabled);
-                if ui.button("Next") {
-                    if drift_project.package_info.script_name.is_empty() {
-                        drift_project.package_info.script_name = suggested_script_name;
+            match project_mode {
+                ProjectMode::New => {
+                    let sufficient = drift_project.has_sufficient_info();
+                    let is_disabled: bool = sufficient.is_err();
+
+                    let disabled = ui.begin_disabled(is_disabled);
+                    if ui.button("Next") {
+                        if drift_project.package_info.script_name.is_empty() {
+                            drift_project.package_info.script_name = suggested_script_name;
+                        }
+
+                        drift_project.directory_name = drift_project.package_info.project_name.clone();
+
+                        *screen_state = ScreenState::CreateProject;
                     }
-
-                    drift_project.directory_name = drift_project.package_info.project_name.clone();
-
-                    *screen_state = ScreenState::CreateProject;
+                    disabled.end();
+                    if ui.is_item_hovered_with_flags(ItemHoveredFlags::ALLOW_WHEN_DISABLED) && is_disabled {
+                        ui.tooltip_text(sufficient.err().unwrap());
+                    }
                 }
-                disabled.end();
-                if ui.is_item_hovered_with_flags(ItemHoveredFlags::ALLOW_WHEN_DISABLED) && is_disabled {
-                    ui.tooltip_text(sufficient.err().unwrap());
-                }
-
-            } else {
-                if ui.button("Done") {
-                    *screen_state = ScreenState::SavingProjectInfo;
+                ProjectMode::Edit => {
+                    if ui.button("Done") {
+                        *screen_state = ScreenState::SavingProjectInfo;
+                    }
                 }
             }
-
         });
 }
 

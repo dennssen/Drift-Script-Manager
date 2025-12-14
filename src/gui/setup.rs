@@ -9,6 +9,7 @@ use raw_window_handle::HasWindowHandle;
 use winit::dpi::LogicalSize;
 use winit::event_loop::EventLoop;
 use winit::window::{Icon, Window, WindowAttributes, WindowButtons};
+use crate::gui::fonts;
 use crate::gui::fonts::Fonts;
 use crate::utils::ui_helpers::roboto_font;
 
@@ -105,19 +106,19 @@ pub fn imgui_init(window: &Window) -> (WinitPlatform, imgui::Context, Fonts) {
 
     let main_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(26.0)]);
+        .add_font(&[roboto_font(fonts::MAIN_SIZE)]);
     let title_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(94.0)]);
+        .add_font(&[roboto_font(fonts::TITLE_SIZE)]);
     let header_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(64.0)]);
+        .add_font(&[roboto_font(fonts::HEADER_SIZE)]);
     let big_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(68.0)]);
+        .add_font(&[roboto_font(fonts::BIG_SIZE)]);
     let medium_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(48.0)]);
+        .add_font(&[roboto_font(fonts::MEDIUM_SIZE)]);
 
     let fonts: Fonts = Fonts::new(main_font, title_font, header_font, big_font, medium_font);
     imgui_context.style_mut().frame_padding = [4.0, 6.0];

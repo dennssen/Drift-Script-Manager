@@ -6,6 +6,7 @@ use capitalize::Capitalize;
 use regex::Regex;
 use zip::ZipWriter;
 use zip_extensions::ZipWriterExtensions;
+use lazy_static::lazy_static;
 use crate::managers::data::get_app_data;
 use crate::managers::git::create_local_repo;
 use crate::gui::state::{BuildData, CreateData};
@@ -27,6 +28,11 @@ pub struct DriftProject {
     pub package_info: PackageInfo,
 }
 
+lazy_static! {
+    static ref WILDCARD_VERSION_PATTERN: Regex =Regex::new(r#"^(?P<start>\s*local\s+[^:=]+\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap();
+    static ref VERSION_PATTERN: Regex = Regex::new(r#"^(?P<start>\s*local\s+_?version\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap();
+}
+
 impl DriftProject {
     pub fn new() -> Self {
         Self {
@@ -42,7 +48,7 @@ impl DriftProject {
         }
     }
 
-    pub fn has_sufficient_info(&self) -> Result<bool, &'static str> {
+    pub fn has_sufficient_info(&self) -> Result<(), &'static str> {
         let package_info: &PackageInfo = &self.package_info;
 
         if package_info.author.is_empty() {
@@ -57,10 +63,10 @@ impl DriftProject {
             return Err("Missing version number")
         }
 
-        Ok(true)
+        Ok(())
     }
 
-    pub fn is_creatable(&self) -> Result<bool, &'static str> {
+    pub fn is_creatable(&self) -> Result<(), &'static str> {
         if self.directory_name.is_empty() {
             return Err("Missing directory name")
         }
@@ -74,7 +80,7 @@ impl DriftProject {
             return Err("Project with this name already exists")
         }
 
-        Ok(true)
+        Ok(())
     }
 
     pub fn create_project_files(&mut self, create_data: &CreateData) -> io::Result<()> {
@@ -271,11 +277,11 @@ impl DriftProject {
                     continue;
                 }
 
-                let pattern: Regex;
+                let pattern: &Regex;
                 if in_next_line {
-                    pattern = Regex::new(r#"^(?P<start>\s*local\s+[^:=]+\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap()
+                    pattern = &*WILDCARD_VERSION_PATTERN;
                 } else {
-                    pattern = Regex::new(r#"^(?P<start>\s*local\s+_?version\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap()
+                    pattern = &*VERSION_PATTERN;
                 }
 
                 if let Some(caps) = pattern.captures(line.as_str()) {
