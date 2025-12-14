@@ -1,8 +1,10 @@
-use std::fs;
+use std::{fs, io};
+use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use crate::utils::dialogs::error_dialog;
+use crate::utils::error_helper::json_error_to_io;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PackageInfo {
@@ -33,32 +35,33 @@ impl PackageInfo {
         }
     }
 
-    pub fn get_package_file() -> Result<(PackageInfo, PathBuf), ()> {
+    pub fn get_package_file() -> Result<(PackageInfo, PathBuf), io::Error> {
         let package_path = FileDialog::new()
             .add_filter("Script package", &["json"])
             .set_title("Open the projects package.json")
             .pick_file();
 
         if package_path.is_none() {
-            return Err(())
+            return Err(Error::new(ErrorKind::NotFound, "package.json file not found"))
         }
 
         let package_path: PathBuf = package_path.unwrap();
 
         let read_result = fs::read_to_string(package_path.clone());
-        if let Err(_) = read_result {
-            error_dialog("Read Failure", "Failed to read from package.json.");
+        if let Err(e) = read_result {
+            error_dialog("Read Failure", "Failed to read from package.json.", &e);
 
-            return Err(())
+            return Err(e)
         }
 
-        let try_parse: Result<PackageInfo, _> = serde_json::from_str(&read_result.unwrap());
-        if let Err(_) = try_parse {
-            error_dialog("Parse Failure", "Failed to parse package.json.\nMake sure to select the correct json file.");
+        let try_parse: Result<PackageInfo, _> = serde_json::from_str(&read_result?);
+        if let Err(e) = try_parse {
+            let e = json_error_to_io(&e);
+            error_dialog("Parse Failure", "Failed to parse package.json.\nMake sure to select the correct json file.", &e);
 
-            return Err(())
+            return Err(e)
         }
 
-        Ok((try_parse.unwrap(), package_path))
+        Ok((try_parse?, package_path))
     }
 }

@@ -1,6 +1,6 @@
 use std::{fs, io};
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
 use std::path::PathBuf;
 use capitalize::Capitalize;
 use regex::Regex;
@@ -12,6 +12,7 @@ use crate::gui::state::{BuildData, CreateData};
 use crate::managers::template::copy_template;
 use crate::project::package_info::PackageInfo;
 use crate::utils::dialogs::{error_dialog, warn_dialog};
+use crate::utils::error_helper::{json_error_to_io, open_error_to_io, zip_error_to_io};
 
 #[derive(Debug)]
 pub struct DriftProject {
@@ -76,7 +77,7 @@ impl DriftProject {
         Ok(true)
     }
 
-    pub fn create_project_files(&mut self, create_data: &CreateData) -> Result<(), String> {
+    pub fn create_project_files(&mut self, create_data: &CreateData) -> io::Result<()> {
         self.project_path = self.project_location.join(&self.directory_name);
         self.build_path =  self.project_path.join("Builds");
         self.script_path = self.project_path.join(&self.package_info.script_name);
@@ -84,50 +85,53 @@ impl DriftProject {
 
         // Create directories
         if !self.project_path.exists() {
-            if let Err(_) = fs::create_dir_all(&self.project_path) {
-                return Err::<(), String>(String::from("Failed to create project path"))
+            if let Err(e) = fs::create_dir_all(&self.project_path) {
+                return Err(e)
             }
         }
-        if let Err(_) = fs::create_dir(&self.build_path) {
-            return Err::<(), String>(String::from("Failed to create build directory"))
+        if let Err(e) = fs::create_dir(&self.build_path) {
+            return Err(e)
         }
 
-        if let Err(_) = fs::create_dir(&self.script_path) {
-            return Err::<(), String>(String::from("Failed to create script directory"))
+        if let Err(e) = fs::create_dir(&self.script_path) {
+            return Err(e)
         }
 
         // Create and write package.json
         let package_json_string = serde_json::to_string_pretty(&self.package_info);
         let package_file = File::create(&self.package_path);
-        if let Err(_) = package_file {
-            return Err::<(), String>(String::from("Failed to create package.json"))
+        if let Err(e) = package_file {
+            return Err(e)
         }
-        if let Err(_) = package_file.unwrap().write_all(package_json_string.unwrap().as_bytes()) {
-            return Err::<(), String>(String::from("Failed to write to package.json"))
+        if let Err(e) = package_file?.write_all(package_json_string?.as_bytes()) {
+            return Err(e)
         }
 
         let template_result = copy_template(&create_data.template, &self.script_path);
         if let Err(e) = template_result {
-            return Err::<(), String>(format!("Failed to create script template\n{}", e))
+            return Err(e)
         }
 
         self.try_write_version();
 
         if create_data.create_repo {
             if let Err(e) = create_local_repo(&self.project_path) {
-                return Err::<(), String>(format!("Failed to create git repo\n{}", e))
+                return Err(e)
             }
         }
         
         if create_data.open_directory {
             let open_result = opener::open(&self.project_path);
-            if let Err(_) = open_result {
-                return Err::<(), String>(String::from("Failed to open project directory"))
+            if let Err(e) = open_result {
+                let e = open_error_to_io(&e);
+                return Err(e)
             }
         }
 
         Ok(())
     }
+
+
 
     pub fn project_from_package(package_info: PackageInfo, package_path: PathBuf) -> Option<Self> {
         if !package_path.exists() {
@@ -189,13 +193,27 @@ impl DriftProject {
         })
     }
 
-    pub fn save(&self) -> Result<(), String> {
+    pub fn save(&self) -> Result<(), ()> {
         // Write to package.json
         if !self.package_path.exists() {
-            error_dialog("Missing Package", "Failed to find package.json");
-            return Err(String::from("Failed to find package.json"))
+            let e: Error = Error::new(ErrorKind::NotFound, "Project is missing a package.json path");
+            error_dialog("Missing Package", "Failed to find package.json", &e);
+            return Err(())
         }
-        fs::write(&self.package_path, serde_json::to_string_pretty(&self.package_info).unwrap()).unwrap();
+        
+        let json = serde_json::to_string_pretty(&self.package_info);
+        
+        if let Err(e) = json {
+            let e = json_error_to_io(&e);
+            error_dialog("Serialization Failure", "Failed to serialize package info", &e);
+            return Err(())
+        }
+        
+        let result = fs::write(&self.package_path, json.unwrap());
+        if let Err(e) = result {
+            error_dialog("Write Failure", "Failed to write to package.json", &e);
+            return Err(())
+        }
 
         // Search for version in main and update it.
         self.try_write_version();
@@ -209,7 +227,7 @@ impl DriftProject {
 
         if let Err(e) = fs::rename(&self.script_path, &new_directory) {
             warn_dialog("Rename Failure", "Failed to rename script directory to script name");
-            return Err(format!("Failed to rename script directory to script name\n{}", e))
+            return Err(())
         }
 
         Ok(())
@@ -290,16 +308,17 @@ impl DriftProject {
 
         let zip_file = File::create(&self.build_path.join(zip_file_name + ".zip"));
 
-        if let Err(_) = zip_file {
-            error_dialog("Build Failure", "Failed to create zip file");
+        if let Err(e) = zip_file {
+            error_dialog("Build Failure", "Failed to create zip file", &e);
             return;
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
         let zip_result = zip.create_from_directory(&self.script_path);
 
-        if let Err(_) = zip_result {
-            error_dialog("Archive Failure", "Failed to archive script directory");
+        if let Err(e) = zip_result {
+            let e = zip_error_to_io(&e);
+            error_dialog("Archive Failure", "Failed to archive script directory", &e);
             return;
         }
 

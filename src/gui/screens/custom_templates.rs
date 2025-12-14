@@ -1,5 +1,7 @@
 use std::fs;
+use std::io::{Error, ErrorKind};
 use imgui::Ui;
+use opener::OpenError;
 use crate::gui::ScreenState;
 use crate::gui::fonts::Fonts;
 use crate::managers::template::get_custom_templates_dir;
@@ -33,14 +35,28 @@ pub fn custom_templates_window(ui: &mut Ui, screen_state: &mut ScreenState, font
                 if !templates_path.exists() {
                     let result = fs::create_dir_all(&templates_path);
                     if let Err(e) = result {
-                        error_dialog("Error", e.to_string().as_str());
+                        error_dialog("Error", "Failed to create templates path", &e);
                         return;
                     }
                 }
 
                 let result = opener::open(&templates_path);
                 if let Err(e) = result {
-                    error_dialog("Error", e.to_string().as_str());
+                    let e = match e {
+                        OpenError::Io(e) => {
+                            e
+                        }
+                        OpenError::Spawn {cmds, source } => {
+                            Error::new(source.kind(), format!("cmds: {}, Err: {}", cmds, source))
+                        }
+                        OpenError::ExitStatus {cmd, status, stderr} => {
+                            Error::new(ErrorKind::Other, format!("cmd: {}, status: {}, stderr: {}", cmd, status, stderr))
+                        }
+                        _ => {
+                            Error::new(ErrorKind::Other, "panic!")
+                        }
+                    };
+                    error_dialog("Error", "Failed to open templates path", &e);
                     return;
                 }
             }

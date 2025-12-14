@@ -3,7 +3,7 @@ use crate::gui::{ScreenState};
 use crate::gui::fonts::Fonts;
 use crate::project::drift_project::DriftProject;
 use crate::project::package_info::PackageInfo;
-use crate::utils::dialogs::error_dialog;
+use crate::utils::dialogs::warn_dialog;
 use crate::utils::ui_helpers::{create_imgui_window, text_center_spacing};
 
 pub fn main_menu_screen(ui: &mut Ui, screen_state: &mut ScreenState, build_project: &mut Option<DriftProject>, edit_project: &mut Option<DriftProject>, fonts: &Fonts) {
@@ -69,19 +69,11 @@ pub fn main_menu_screen(ui: &mut Ui, screen_state: &mut ScreenState, build_proje
 
 fn set_build_screen(screen_state: &mut ScreenState, build_project: &mut Option<DriftProject>) {
     *screen_state = ScreenState::SetBuildInfo;
-    let try_package = PackageInfo::get_package_file();
 
-    if try_package.is_err() {
-        *screen_state = ScreenState::MainMenu;
-        return;
-    }
-
-    let (package_info, package_path) = try_package.unwrap();
-
-    let drift_project: Option<DriftProject> = DriftProject::project_from_package(package_info, package_path);
+    let drift_project: Option<DriftProject> = try_get_project();
 
     drift_project.is_none().then(|| {
-        error_dialog("Parse Failure", "Failed to parse project from package.json.\nCheck your file structure.");
+        warn_dialog("Parse Failure", "Failed to parse project from package.json.\nCheck your file structure.");
 
         *screen_state = ScreenState::MainMenu;
         return;
@@ -92,23 +84,27 @@ fn set_build_screen(screen_state: &mut ScreenState, build_project: &mut Option<D
 
 fn set_edit_screen(screen_state: &mut ScreenState, edit_project: &mut Option<DriftProject>) {
     *screen_state = ScreenState::EditProjectInfo;
-    let try_package = PackageInfo::get_package_file();
 
-    if try_package.is_err() {
-        *screen_state = ScreenState::MainMenu;
-        return;
-    }
-
-    let (package_info, package_path) = try_package.unwrap();
-
-    let drift_project: Option<DriftProject> = DriftProject::project_from_package(package_info, package_path);
+    let drift_project: Option<DriftProject> = try_get_project();
 
     drift_project.is_none().then(|| {
-        error_dialog("Parse Failure", "Failed to parse project from package.json.\nCheck your file structure.");
+        warn_dialog("Parse Failure", "Failed to parse project from package.json.\nCheck your file structure.");
 
         *screen_state = ScreenState::MainMenu;
         return;
     });
 
     *edit_project = drift_project;
+}
+
+fn try_get_project() -> Option<DriftProject> {
+    let try_package = PackageInfo::get_package_file();
+
+    if try_package.is_err() {
+        return None;
+    }
+
+    let (package_info, package_path) = try_package.unwrap();
+
+    DriftProject::project_from_package(package_info, package_path)
 }

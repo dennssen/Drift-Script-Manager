@@ -3,7 +3,7 @@ use crate::gui::{ScreenState};
 
 pub fn save_project_edit(screen_state: &mut ScreenState, project: &DriftProject) {
     if let Err(_) = project.save() {
-        // log
+        // error is pre handled/reported
     }
     *screen_state = ScreenState::MainMenu;
 }

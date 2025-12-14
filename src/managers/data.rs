@@ -2,6 +2,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use serde::{Deserialize, Serialize};
+use crate::utils::dialogs::error_dialog;
+use crate::utils::error_helper::json_error_to_io;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AppData {
     pub keywords: Vec<String>,
@@ -43,15 +46,16 @@ impl AppData {
 
         let appdata_string = fs::read_to_string(appdata_path);
 
-        if let Err(_) = appdata_string {
-            // log the error at some point
+        if let Err(e) = appdata_string {
+            error_dialog("AppData Failure", "Failed to read saved data. Created new save data.", &e);
             return Self::new();
         }
 
         let try_parse: Result<AppData, _> = serde_json::from_str(appdata_string.unwrap().as_str());
 
-        if let Err(_) = try_parse {
-            // log error
+        if let Err(e) = try_parse {
+            let e = json_error_to_io(&e);
+            error_dialog("AppData Failure", "Failed to parse save data. Created new save data.", &e);
             return Self::new();
         }
 
@@ -72,15 +76,16 @@ impl AppData {
 
         let appdata_string = serde_json::to_string_pretty(appdata);
 
-        if let Err(_) = appdata_string {
-            // log
+        if let Err(e) = appdata_string {
+            let e = json_error_to_io(&e);
+            error_dialog("Serialize AppData Failure", "Failed to serialize save data", &e);
             return;
         }
 
         let write_result = fs::write(appdata_parent_path.join("data.json"), appdata_string.unwrap());
 
-        if let Err(_) = write_result {
-            // log
+        if let Err(e) = write_result {
+            error_dialog("Write AppData Failure", "Failed to write save data", &e);
         }
     }
 }

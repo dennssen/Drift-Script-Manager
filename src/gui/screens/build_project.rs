@@ -34,6 +34,7 @@ pub fn build_project_screen(ui: &Ui, screen_state: &mut ScreenState, build_data:
             ui.same_line();
             if ui.button("Build") {
                 if let Err(_) = project.save() {
+                    // error is pre handled
                     *screen_state = ScreenState::MainMenu;
                 } else {
                     *screen_state = ScreenState::BuildingProject;

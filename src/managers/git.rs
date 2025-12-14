@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io;
-use std::io::Write;
+use std::io::{Error, ErrorKind, Write};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -12,14 +12,17 @@ pub fn has_git() -> bool {
         .unwrap_or(false)
 }
 
-pub fn create_local_repo(project_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+pub fn create_local_repo(project_path: &PathBuf) -> io::Result<()> {
     let output = Command::new("git")
         .arg("init")
         .current_dir(&project_path)
         .output()?;
 
     if !output.status.success() {
-        return Err(format!("Failed to initialize git repo: {}", String::from_utf8_lossy(&output.stderr)).into())
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("Failed to initialize git repo: {}", String::from_utf8_lossy(&output.stderr))
+        ))
     }
 
     create_git_ignore(&project_path)?;
@@ -31,7 +34,10 @@ pub fn create_local_repo(project_path: &PathBuf) -> Result<(), Box<dyn std::erro
         .output()?;
 
     if !output.status.success() {
-        return Err(format!("Failed to add files: {}", String::from_utf8_lossy(&output.stderr)).into())
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("Failed to add files {}", String::from_utf8_lossy(&output.stderr))
+        ))
     }
 
     let output = Command::new("git")
@@ -42,7 +48,10 @@ pub fn create_local_repo(project_path: &PathBuf) -> Result<(), Box<dyn std::erro
         .output()?;
 
     if !output.status.success() {
-        return Err(format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr)).into())
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr))
+        ))
     }
 
     Ok(())

@@ -16,6 +16,7 @@ use imgui::sys::{igGetMainViewport, igSetNextWindowPos, igSetNextWindowSize, ImG
 use imgui::Ui;
 use crate::gui::screens::custom_templates::custom_templates_window;
 use crate::gui::screens::main_menu::main_menu_screen;
+use crate::utils::dialogs::warn_dialog;
 
 pub struct GuiInfo {
     screen_state: ScreenState,
@@ -83,7 +84,7 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
         }
         ScreenState::CreateProject => {
             if let Err(e) = create_project_screen(ui, &mut gui_info.screen_state, &mut gui_info.screen_data.create_data, &mut gui_info.projects.new_project_info, fonts) {
-                error_dialog("Error", e.to_string().as_str());
+                error_dialog("Error", "Error:", &e);
                 gui_info.screen_state = ScreenState::MainMenu;
             }
         }
@@ -96,8 +97,8 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
                 });
 
             let create_result = gui_info.projects.new_project_info.create_project_files(&mut gui_info.screen_data.create_data);
-            if let Err(err) = create_result {
-                error_dialog("Creation Failure", err.as_str());
+            if let Err(e) = create_result {
+                error_dialog("Creation Failure", "Failed to create drift project files", &e);
             }
 
             gui_info.projects.new_project_info.reset_project_data();
@@ -113,7 +114,7 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
                 });
 
             gui_info.projects.edit_project.is_none().then(|| {
-                error_dialog("Missing Project", "Project cannot be edited because it does not exist");
+                warn_dialog("Missing Project", "Project cannot be edited because it does not exist");
                 gui_info.screen_state = ScreenState::MainMenu;
                 return;
             });
@@ -129,7 +130,7 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
                 });
 
             gui_info.projects.build_project.is_none().then(|| {
-                error_dialog("Missing Project", "Project cannot be built because it does not exist");
+                warn_dialog("Missing Project", "Project cannot be built because it does not exist");
                 gui_info.screen_state = ScreenState::MainMenu;
                 return;
             });
