@@ -2,7 +2,7 @@ use std::fs;
 use std::io::{Error, ErrorKind};
 use imgui::Ui;
 use opener::OpenError;
-use crate::gui::ScreenState;
+use crate::gui::ui::ScreenState;
 use crate::gui::fonts::Fonts;
 use crate::managers::template::get_custom_templates_dir;
 use crate::utils::dialogs::error_dialog;

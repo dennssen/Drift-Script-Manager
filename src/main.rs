@@ -12,8 +12,9 @@ mod managers;
 mod project;
 mod utils;
 
+use gui::ui::{GuiInfo, render_ui};
 use gui::setup::{imgui_init, create_window, glow_context};
-use managers::data::{get_app_data, AppData};
+use managers::data::get_app_data;
 
 fn main() {
     // Common setup for creating a winit window and imgui context, not specifc
@@ -32,7 +33,7 @@ fn main() {
     let mut ig_renderer = imgui_glow_renderer::AutoRenderer::new(gl, &mut imgui_context)
         .expect("failed to create renderer");
 
-    let mut gui_info: gui::GuiInfo = gui::GuiInfo::new();
+    let mut gui_info: GuiInfo = GuiInfo::new();
     let mut last_frame = Instant::now();
 
     // Standard winit event loop
@@ -61,7 +62,7 @@ fn main() {
                     unsafe { ig_renderer.gl_context().clear(glow::COLOR_BUFFER_BIT) };
 
                     let ui = imgui_context.frame();
-                    gui::render_ui(ui, &mut gui_info, &fonts);
+                    render_ui(ui, &mut gui_info, &fonts);
 
                     winit_platform.prepare_render(ui, &window);
                     let draw_data = imgui_context.render();
@@ -102,6 +103,6 @@ fn main() {
         .expect("EventLoop error");
 
     let final_app_data = get_app_data().lock().unwrap();
-    AppData::save(&final_app_data);
+    final_app_data.save();
 }
 

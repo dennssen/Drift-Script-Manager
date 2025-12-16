@@ -5,7 +5,6 @@ use std::ptr::null;
 use imgui::{FontSource, Ui, Window};
 use imgui::sys::{igBeginListBox, igCalcTextSize, igEndListBox, igGetWindowWidth, igSelectable_Bool, ImVec2};
 use rfd::FileDialog;
-use crate::managers::data::get_app_data;
 
 const FONT_PATH: &[u8] = include_bytes!("../../assets/fonts/Roboto-VariableFont_wdth,wght.ttf");
 

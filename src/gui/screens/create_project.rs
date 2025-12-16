@@ -5,7 +5,7 @@ use crate::gui::fonts::Fonts;
 use crate::managers;
 use managers::git::has_git;
 use managers::template::{get_custom_templates, EmbeddedTemplate, Template};
-use crate::gui::{CreateData, ScreenState};
+use crate::gui::ui::{CreateData, ScreenState};
 use crate::utils::ui_helpers::{create_imgui_window, directory_input};
 
 pub fn create_project_screen(ui: &Ui, screen_state: &mut ScreenState, create_data: &mut CreateData, project: &mut DriftProject, fonts: &Fonts) -> io::Result<()> {

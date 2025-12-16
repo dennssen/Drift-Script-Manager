@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+use capitalize::Capitalize;
 use serde::{Deserialize, Serialize};
 use crate::utils::dialogs::error_dialog;
 use crate::utils::error_helper::json_error_to_io;
@@ -67,14 +68,26 @@ impl AppData {
         data
     }
 
-    pub fn save(appdata: &Self) {
+    pub fn update_keywords(&mut self, keywords: &[String]) {
+
+        for keyword in keywords {
+            if !keyword.is_empty() && self.keywords.iter().any(|e| e.to_lowercase() == keyword.to_lowercase()){
+                continue;
+            }
+
+            // Capitalize to try and match the default keywords
+            self.keywords.push(keyword.capitalize_first_only());
+        }
+    }
+
+    pub fn save(&self) {
         let appdata_parent_path: PathBuf = dirs::data_dir().unwrap().join("DriftScriptManager");
 
         if !appdata_parent_path.exists() {
             fs::create_dir(dirs::data_dir().unwrap().join("DriftScriptManager")).unwrap_or_default();
         }
 
-        let appdata_string = serde_json::to_string_pretty(appdata);
+        let appdata_string = serde_json::to_string_pretty(self);
 
         if let Err(e) = appdata_string {
             let e = json_error_to_io(&e);

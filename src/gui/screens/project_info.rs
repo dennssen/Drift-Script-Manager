@@ -4,7 +4,7 @@ use std::sync::{Mutex};
 use crate::utils::ui_helpers::{create_imgui_window, keyword_list_box};
 use crate::gui::fonts::Fonts;
 use crate::project::drift_project::{DriftProject};
-use crate::gui::ScreenState;
+use crate::gui::ui::ScreenState;
 use crate::managers::data::get_app_data;
 
 static SEARCH_FILTER: Mutex<String> = Mutex::new(String::new());
