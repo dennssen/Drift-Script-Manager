@@ -165,33 +165,22 @@ impl DriftProject {
         self.package_path = self.script_path.join("package.json");
 
         // Create directories
-        if !self.project_path.exists() {
-            if let Err(e) = fs::create_dir_all(&self.project_path) {
-                return Err(e)
-            }
-        }
-        if let Err(e) = fs::create_dir(&self.build_path) {
-            return Err(e)
+        if self.project_path.exists() {
+            return Err(Error::new(ErrorKind::AlreadyExists, "Project directory already exists"))
         }
 
-        if let Err(e) = fs::create_dir(&self.script_path) {
-            return Err(e)
-        }
+        fs::create_dir_all(&self.project_path)?;
+
+        fs::create_dir(&self.build_path)?;
+        fs::create_dir(&self.script_path)?;
 
         // Create and write package.json
-        let package_json_string = serde_json::to_string_pretty(&self.package_info);
-        let package_file = File::create(&self.package_path);
-        if let Err(e) = package_file {
-            return Err(e)
-        }
-        if let Err(e) = package_file?.write_all(package_json_string?.as_bytes()) {
-            return Err(e)
-        }
+        let package_json_string = serde_json::to_string_pretty(&self.package_info)?;
+        let mut package_file = File::create(&self.package_path)?;
 
-        let template_result = copy_template(&create_data.template, &self.script_path);
-        if let Err(e) = template_result {
-            return Err(e)
-        }
+        package_file.write_all(package_json_string.as_bytes())?;
+
+        copy_template(&create_data.template, &self.script_path)?;
 
         self.try_write_version();
 
@@ -375,6 +364,8 @@ mod tests {
     use super::*;
     use tempfile::{tempdir, TempDir};
     use std::fs;
+    use std::ptr::fn_addr_eq;
+    use crate::managers::template::{EmbeddedTemplate, Template};
 
     fn script_name(author_name: &str, project_name: &str) -> String {
         format!("{}.{}", author_name.to_lowercase().replace(" ", ""), project_name.to_lowercase().replace(" ", ""))
@@ -492,5 +483,75 @@ mod tests {
         let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
 
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_has_sufficient_info() {
+        let mut project: DriftProject = DriftProject::new();
+        project.package_info.author = "Me".to_string();
+        project.package_info.project_name = "Project".to_string();
+        project.package_info.version = "1.0.0".to_string();
+
+        assert!(project.has_sufficient_info().is_ok())
+    }
+
+    #[test]
+    fn test_has_insufficient_info() {
+        let mut project: DriftProject = DriftProject::new();
+        project.package_info.project_name = "Project".to_string();
+        project.package_info.version = "1.0.0".to_string();
+
+        assert_eq!(project.has_sufficient_info(), Err("Missing author name"));
+    }
+
+    #[test]
+    fn test_is_creatable() {
+        let temp = tempdir().unwrap();
+        let mut project: DriftProject = DriftProject::new();
+        project.directory_name = "Project".to_string();
+        project.project_location = temp.path().to_path_buf();
+
+        assert!(project.is_creatable().is_ok());
+    }
+
+    #[test]
+    fn test_is_creatable_already_exists() {
+        let temp = tempdir().unwrap();
+        fs::create_dir(temp.path().join("Project")).unwrap();
+
+        let mut project: DriftProject = DriftProject::new();
+        project.directory_name = "Project".to_string();
+        project.project_location = temp.path().to_path_buf();
+
+        assert_eq!(project.is_creatable(), Err("Project with this name already exists"))
+    }
+
+    #[test]
+    fn test_create_project_files_default() {
+        let temp = tempdir().unwrap();
+
+        let mut project: DriftProject = DriftProject::new();
+        project.project_location = temp.path().to_path_buf();
+        project.directory_name = "Project".to_string();
+        let package_info = &mut project.package_info;
+        package_info.project_name = "Project".to_string();
+        package_info.version = "1.0.0".to_string();
+        package_info.author = "Me".to_string();
+        package_info.script_name = script_name("Me", "Project");
+        package_info.main = "main.luau".to_string();
+
+        let create_data: CreateData = CreateData {
+            open_directory: false,
+            create_repo: false,
+            template: Template::Embedded(EmbeddedTemplate::Default)
+        };
+
+
+
+        assert!(project.create_project_files(&create_data).is_ok());
+        assert!(project.project_path.exists());
+        assert!(project.build_path.exists());
+        assert!(project.script_path.exists());
+        assert!(project.package_path.exists());
     }
 }
