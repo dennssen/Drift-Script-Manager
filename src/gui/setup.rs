@@ -130,16 +130,22 @@ pub fn imgui_init(window: &Window) -> (WinitPlatform, imgui::Context, Fonts) {
 }
 
 fn load_icon(bytes: &[u8]) -> Option<Icon> {
-    let (icon_rgba, icon_width, icon_height) = {
-        let image = image::load_from_memory(bytes).unwrap().into_rgba8();
-        let (width, height) = image.dimensions();
-        let rgba = image.into_raw();
-        (rgba, width, height)
-    };
-    let result = Icon::from_rgba(icon_rgba, icon_width, icon_height);
-    if let Err(_) = result {
-        None
-    } else {
-        Some(result.unwrap())
+    let image = image::load_from_memory(bytes).ok()?.into_rgba8();
+    let (width, height) = image.dimensions();
+    let rgba = image.into_raw();
+
+    Icon::from_rgba(rgba, width, height).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_icons_are_valid() {
+        assert!(load_icon(ICON_32).is_some(), "32px icon failed to load");
+
+        #[cfg(target_os = "windows")]
+        assert!(load_icon(ICON_256).is_some(), "256px icon failed to load");
     }
 }

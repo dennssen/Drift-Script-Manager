@@ -71,7 +71,7 @@ impl AppData {
     pub fn update_keywords(&mut self, keywords: &[String]) {
 
         for keyword in keywords {
-            if !keyword.is_empty() && self.keywords.iter().any(|e| e.to_lowercase() == keyword.to_lowercase()){
+            if keyword.is_empty() || self.keywords.iter().any(|e| e.to_lowercase() == keyword.to_lowercase()){
                 continue;
             }
 
@@ -105,4 +105,37 @@ impl AppData {
 
 pub fn get_app_data() -> &'static Mutex<AppData> {
     APP_DATA.get_or_init(|| Mutex::new(AppData::load_or_create()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_keywords_no_empty() {
+        let mut app_data = AppData {
+            keywords: vec![String::from("Existing keyword")]
+        };
+
+        let new_keywords = vec![String::new()];
+
+        app_data.update_keywords(&new_keywords);
+
+        let found_empty = app_data.keywords.iter().any(|e| e.is_empty());
+
+        assert!(!found_empty, "Found empty keyword");
+    }
+
+    #[test]
+    fn test_update_keywords_no_duplicates() {
+        let mut app_data = AppData {
+            keywords: vec![String::from("Existing keyword")]
+        };
+
+        let new_keywords = vec![String::from("Existing keyword")];
+
+        app_data.update_keywords(&new_keywords);
+
+        assert!(app_data.keywords.len() < 2, "Accepted duplicate");
+    }
 }
