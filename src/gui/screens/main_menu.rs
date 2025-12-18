@@ -4,7 +4,7 @@ use crate::gui::fonts::Fonts;
 use crate::managers::data::get_app_data;
 use crate::project::drift_project::{DriftProject, ProjectPaths};
 use crate::project::package_info::PackageInfo;
-use crate::utils::dialogs::warn_dialog;
+use crate::utils::dialogs::{error_dialog, warn_dialog};
 use crate::utils::ui_helpers::{create_imgui_window, text_center_spacing};
 
 pub fn main_menu_screen(ui: &mut Ui, screen_state: &mut ScreenState, build_project: &mut Option<DriftProject>, edit_project: &mut Option<DriftProject>, fonts: &Fonts) {
@@ -92,6 +92,7 @@ fn try_get_project() -> Option<DriftProject> {
     let try_package = PackageInfo::get_package_file();
 
     if try_package.is_err() {
+        error_dialog("Get Package Error", "Failed to get package.json", &try_package.unwrap_err());
         return None;
     }
 

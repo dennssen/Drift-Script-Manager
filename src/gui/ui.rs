@@ -12,12 +12,6 @@ use utils::dialogs::{error_dialog, warn_dialog};
 use imgui::sys::{igGetMainViewport, igSetNextWindowPos, igSetNextWindowSize, ImGuiCond, ImGuiViewport, ImVec2};
 use imgui::Ui;
 
-pub struct GuiInfo {
-    screen_state: ScreenState,
-    screen_data: ScreenData,
-    projects: ProjectsData
-}
-
 pub enum ScreenState {
     MainMenu,
     SetProjectInfo,
@@ -28,6 +22,12 @@ pub enum ScreenState {
     EditProjectInfo,
     SavingProjectInfo,
     TemplateInfo,
+}
+
+pub struct GuiInfo {
+    screen_state: ScreenState,
+    screen_data: ScreenData,
+    projects: ProjectsData
 }
 
 impl GuiInfo {
