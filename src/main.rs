@@ -17,7 +17,7 @@ use gui::setup::{imgui_init, create_window, glow_context};
 use managers::data::get_app_data;
 
 fn main() {
-    // Common setup for creating a winit window and imgui context, not specifc
+    // Common setup for creating a winit window and imgui context, not specific
     // to this renderer at all except that glutin is used to create the window
     // since it will give us access to a GL context
     let (event_loop, window, surface, context) = create_window();
