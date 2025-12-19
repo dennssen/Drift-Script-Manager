@@ -1,10 +1,11 @@
+use std::io::{Result, Error, ErrorKind};
 use imgui::{StyleVar, Ui};
 use crate::gui::ui::{ScreenState};
 use crate::gui::fonts::Fonts;
 use crate::managers::data::get_app_data;
 use crate::project::drift_project::{DriftProject, ProjectPaths};
 use crate::project::package_info::PackageInfo;
-use crate::utils::dialogs::{error_dialog, warn_dialog};
+use crate::utils::dialogs::warn_dialog;
 use crate::utils::ui_helpers::{create_imgui_window, text_center_spacing};
 
 pub fn main_menu_screen(ui: &mut Ui, screen_state: &mut ScreenState, build_project: &mut Option<DriftProject>, edit_project: &mut Option<DriftProject>, fonts: &Fonts) {
@@ -61,48 +62,45 @@ pub fn main_menu_screen(ui: &mut Ui, screen_state: &mut ScreenState, build_proje
 fn set_build_screen(screen_state: &mut ScreenState, build_project: &mut Option<DriftProject>) {
     *screen_state = ScreenState::SetBuildInfo;
 
-    let drift_project: Option<DriftProject> = try_get_project();
+    let drift_project: Result<DriftProject> = try_get_project();
 
-    drift_project.is_none().then(|| {
-        warn_dialog("Parse Failure", "Failed to parse project from package.json.\nCheck your file structure.");
+    if drift_project.is_err() {
+        warn_dialog("File Dialog Failure", drift_project.unwrap_err().to_string().as_str());
 
         *screen_state = ScreenState::MainMenu;
         return;
-    });
+    }
 
-    *build_project = drift_project;
+    *build_project = Some(drift_project.unwrap());
 }
 
 fn set_edit_screen(screen_state: &mut ScreenState, edit_project: &mut Option<DriftProject>) {
     *screen_state = ScreenState::EditProjectInfo;
 
-    let drift_project: Option<DriftProject> = try_get_project();
+    let drift_project: Result<DriftProject> = try_get_project();
 
-    drift_project.is_none().then(|| {
-        warn_dialog("Parse Failure", "Failed to parse project from package.json.\nCheck your file structure.");
+    if drift_project.is_err() {
+        warn_dialog("File Dialog Failure", drift_project.unwrap_err().to_string().as_str());
 
         *screen_state = ScreenState::MainMenu;
         return;
-    });
-
-    *edit_project = drift_project;
-}
-
-fn try_get_project() -> Option<DriftProject> {
-    let try_package = PackageInfo::get_package_file();
-
-    if try_package.is_err() {
-        error_dialog("Get Package Error", "Failed to get package.json", &try_package.unwrap_err());
-        return None;
     }
 
-    let (package_info, package_path) = try_package.unwrap();
+    *edit_project = Some(drift_project.unwrap());
+}
 
-    let project_paths: ProjectPaths = ProjectPaths::validate_project_structure(package_path, &package_info)?;
+fn try_get_project() -> Result<DriftProject> {
+    let (package_info, package_path) = PackageInfo::get_package_file()?;
 
-    let project: DriftProject = DriftProject::project_from_package(package_info, project_paths);
+    let project_paths: Option<ProjectPaths> = ProjectPaths::validate_project_structure(package_path, &package_info);
+
+    if project_paths.is_none() {
+        return Err(Error::new(ErrorKind::InvalidInput, "Failed to validate project structure"));
+    }
+
+    let project: DriftProject = DriftProject::project_from_package(package_info, project_paths.unwrap());
 
     let mut app_data = get_app_data().lock().unwrap();
     app_data.update_keywords(&project.package_info.keywords);
-    Some(project)
+    Ok(project)
 }
