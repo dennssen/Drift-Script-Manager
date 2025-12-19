@@ -111,7 +111,7 @@ fn copy_embedded_dir_recursive(dir: &include_dir::Dir, dst: &Path) -> std::io::R
 fn copy_custom_template(template_name: &str, script_path: &Path) -> io::Result<()> {
     let template_dir = get_custom_templates_dir().join(template_name);
 
-    if !template_dir.exists() {
+    if template_name.is_empty() || !template_dir.exists() {
         return Err(Error::new(ErrorKind::NotFound, "Custom template not found"));
     }
 
@@ -136,4 +136,41 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::{create_dir, write};
+    use tempfile::tempdir;
+    use super::*;
+
+    fn is_directory_empty<P: AsRef<Path>>(path: P) -> io::Result<bool> {
+        let mut entries = read_dir(path)?;
+
+        Ok(entries.next().is_none())
+    }
+
+    #[test]
+    fn test_copy_embedded_template() {
+        let temp = tempdir().unwrap();
+        let template = EmbeddedTemplate::Default;
+
+        assert!(copy_embedded_template(&template, temp.path()).is_ok());
+        assert!(!is_directory_empty(temp.path()).unwrap());
+    }
+
+    #[test]
+    fn test_copy_dir_recursive() {
+        let temp = tempdir().unwrap();
+        let src_path = temp.path().join("src");
+        let dst_path = temp.path().join("dst");
+
+        create_dir(&src_path).unwrap();
+        create_dir(&dst_path).unwrap();
+
+        write(src_path.join("test.txt"), "").unwrap();
+
+        assert!(copy_dir_recursive(&src_path, &dst_path).is_ok());
+        assert!(!is_directory_empty(dst_path).unwrap());
+    }
 }
