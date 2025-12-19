@@ -364,7 +364,6 @@ mod tests {
     use super::*;
     use tempfile::{tempdir, TempDir};
     use std::fs;
-    use std::ptr::fn_addr_eq;
     use crate::managers::template::{EmbeddedTemplate, Template};
 
     fn script_name(author_name: &str, project_name: &str) -> String {

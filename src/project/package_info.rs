@@ -1,9 +1,8 @@
-use std::{fs, io};
+use std::fs;
 use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
-use crate::utils::dialogs::error_dialog;
 use crate::utils::error_helper::json_error_to_io;
 
 #[derive(Serialize, Deserialize, Debug)]
