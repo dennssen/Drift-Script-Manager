@@ -9,6 +9,9 @@ on:
       - 'v*'
   workflow_dispatch:  # Allow manual trigger from GitHub UI
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -138,8 +141,7 @@ jobs:
           Categories=Utility;
           EOF
           
-          # Copy icon (adjust path to your actual icon)
-          # cp assets/logo/256.png AppDir/usr/share/icons/hicolor/256x256/apps/Drift-Script-Manager.png
+          cp assets/logo/256.png AppDir/usr/share/icons/hicolor/256x256/apps/Drift-Script-Manager.png
 
       - name: Build AppImage
         run: |
