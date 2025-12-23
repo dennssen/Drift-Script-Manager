@@ -9,6 +9,8 @@ use raw_window_handle::HasWindowHandle;
 use winit::dpi::LogicalSize;
 use winit::event_loop::EventLoop;
 use winit::window::{Icon, Window, WindowAttributes, WindowButtons};
+#[cfg(target_os = "windows")]
+use winit::platform::windows::WindowAttributesExtWindows;
 use crate::gui::fonts;
 use crate::gui::fonts::Fonts;
 use crate::utils::ui_helpers::roboto_font;
