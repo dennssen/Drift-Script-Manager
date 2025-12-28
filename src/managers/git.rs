@@ -3,13 +3,15 @@ use std::io;
 use std::io::{Error, ErrorKind, Write};
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
+use which::which;
+
+static HAS_GIT: OnceLock<bool> = OnceLock::new();
 
 pub fn has_git() -> bool {
-    Command::new("git")
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    *HAS_GIT.get_or_init(|| {
+        which("git").is_ok()
+    })
 }
 
 pub fn create_local_repo(project_path: &PathBuf) -> io::Result<()> {
