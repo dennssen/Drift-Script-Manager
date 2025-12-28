@@ -40,16 +40,17 @@ pub fn create_imgui_window<'ui>(ui: &'ui Ui, label: &'ui str) -> Window<'ui, 'ui
 }
 
 pub fn directory_input(ui: &Ui, label: &str, directory_path: &mut PathBuf) {
-    let disabled = ui.begin_disabled(true);
-    ui.input_text("##Path", &mut directory_path.to_str().unwrap().to_string()).build();
-    disabled.end();
-    ui.same_line();
-    if ui.button("/") {
-        let new_directory = FileDialog::new()
-            .pick_folder();
+    let path_str = directory_path.to_str().unwrap_or("");
 
-        if new_directory.is_some() {
-            *directory_path = new_directory.unwrap();
+    // Always disabled because it is read only. (.read_only() is not obvious enough imo)
+    ui.disabled(true, || {
+        ui.input_text("##Path", &mut path_str.to_string()).build();
+    });
+
+    ui.same_line();
+    if ui.button(" / ") {
+        if let Some(new_directory) = FileDialog::new().pick_folder() {
+            *directory_path = new_directory;
         }
     }
     ui.same_line();
