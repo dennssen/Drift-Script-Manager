@@ -1,5 +1,3 @@
-//! A basic self-contained example to get you from zero-to-demo-window as fast
-//! as possible.
 #![windows_subsystem = "windows"]
 use std::num::NonZeroU32;
 use std::sync::Arc;
