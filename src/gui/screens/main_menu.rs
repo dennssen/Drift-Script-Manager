@@ -1,4 +1,4 @@
-use std::io::{Result, Error, ErrorKind};
+use std::io::Result;
 use imgui::{StyleVar, Ui};
 use crate::gui::ui::{ScreenState};
 use crate::gui::fonts::Fonts;
@@ -92,13 +92,9 @@ fn set_edit_screen(screen_state: &mut ScreenState, edit_project: &mut Option<Dri
 fn try_get_project() -> Result<DriftProject> {
     let (package_info, package_path) = PackageInfo::get_package_file()?;
 
-    let project_paths: Option<ProjectPaths> = ProjectPaths::validate_project_structure(package_path, &package_info);
+    let project_paths: ProjectPaths = ProjectPaths::validate_project_structure(package_path, &package_info)?;
 
-    if project_paths.is_none() {
-        return Err(Error::new(ErrorKind::InvalidInput, "Failed to validate project structure"));
-    }
-
-    let project: DriftProject = DriftProject::project_from_package(package_info, project_paths.unwrap());
+    let project: DriftProject = DriftProject::project_from_package(package_info, project_paths);
 
     let mut app_data = get_app_data().lock().unwrap();
     app_data.update_keywords(&project.package_info.keywords);

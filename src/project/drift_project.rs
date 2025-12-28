@@ -37,42 +37,42 @@ impl ProjectPaths {
         }
     }
 
-    pub fn validate_project_structure(package_path: PathBuf, package_info: &PackageInfo) -> Option<ProjectPaths> {
+    pub fn validate_project_structure(package_path: PathBuf, package_info: &PackageInfo) -> io::Result<ProjectPaths> {
         let mut paths: ProjectPaths = ProjectPaths::new();
 
         paths.package_path = package_path;
         if !paths.package_path.exists() {
-            return None
+            return Err(Error::new(ErrorKind::NotFound, "package.json doesn't exist"))
         }
 
-        let package_name = get_path_file_name(&paths.package_path)?;
+        let package_name = get_path_file_name(&paths.package_path).unwrap_or("");
         if package_name != "package.json" {
-            return None
+            return Err(Error::new(ErrorKind::InvalidFilename, "file not called package.json"))
         }
 
         paths.script_path = paths.package_path.parent().unwrap().to_path_buf();
         if !paths.script_path.exists() {
-            return None
+            return Err(Error::new(ErrorKind::InvalidInput, "package.json is not in a script directory"))
         }
 
-        let script_name = get_path_file_name(&paths.script_path)?;
+        let script_name = get_path_file_name(&paths.script_path).unwrap_or("");
         if script_name != package_info.script_name {
-            return None
+            return Err(Error::new(ErrorKind::InvalidInput, "script directory name does not match package.json 'name' property"))
         }
 
         paths.project_path = paths.script_path.parent().unwrap().to_path_buf();
         if !paths.project_path.exists() {
-            return None
+            return Err(Error::new(ErrorKind::InvalidInput, "script directory is not in a project directory"))
         }
 
-        paths.directory_name = get_path_file_name(&paths.project_path)?.to_string();
-        if paths.directory_name != package_info.project_name {
-            return None
+        paths.directory_name = get_path_file_name(&paths.project_path).unwrap_or("").to_string();
+        if paths.directory_name != "Behaviors" {
+            return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the project directory. Please create a separate parent directory for your script and try again."))
         }
 
         paths.project_location = paths.project_path.parent().unwrap().to_path_buf();
         if !paths.project_location.exists() {
-            return None
+            return Err(Error::new(ErrorKind::InvalidInput, "project directory is not in a parent directory"))
         }
 
         let try_build_path: PathBuf = paths.project_path.join("Builds").to_path_buf();
@@ -80,7 +80,7 @@ impl ProjectPaths {
             paths.build_path = try_build_path;
         }
 
-        Some(paths)
+        Ok(paths)
     }
 }
 
@@ -448,7 +448,7 @@ mod tests {
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
 
-        assert!(result.is_some(), "Result should be Some");
+        assert!(result.is_ok(), "Result should be Ok");
 
         let result = result.unwrap();
         assert_eq!(result.directory_name, project_name, "Directory name should be project name");
@@ -465,7 +465,7 @@ mod tests {
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
 
-        assert!(result.is_some(), "Result should be Some");
+        assert!(result.is_ok(), "Result should be Ok");
 
         let result = result.unwrap();
         assert!(!result.build_path.exists(), "Builds path should not exist");
@@ -481,7 +481,7 @@ mod tests {
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
 
-        assert!(result.is_none());
+        assert!(result.is_err());
     }
 
     #[test]
