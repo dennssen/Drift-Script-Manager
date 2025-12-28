@@ -6,6 +6,7 @@ use crate::gui::fonts::Fonts;
 use crate::project::drift_project::{DriftProject};
 use crate::gui::ui::ScreenState;
 use crate::managers::data::get_app_data;
+use crate::managers::template::{get_custom_templates, Template};
 
 static SEARCH_FILTER: Mutex<String> = Mutex::new(String::new());
 
@@ -14,7 +15,14 @@ pub enum ProjectMode {
     Edit
 }
 
-pub fn project_info_screen(ui: &mut Ui, screen_state: &mut ScreenState, drift_project: &mut DriftProject, project_mode: ProjectMode, fonts: &Fonts) {
+pub fn project_info_screen(
+    ui: &mut Ui,
+    screen_state: &mut ScreenState,
+    drift_project: &mut DriftProject,
+    project_mode: ProjectMode,
+    custom_templates: &mut Vec<Template>,
+    fonts: &Fonts
+) {
     let (window_name, header) = match project_mode {
         ProjectMode::New => {
             ("Creating Project...", "New Project")
@@ -77,6 +85,12 @@ pub fn project_info_screen(ui: &mut Ui, screen_state: &mut ScreenState, drift_pr
                         }
 
                         drift_project.directory_name = drift_project.package_info.project_name.clone();
+
+                        *custom_templates = get_custom_templates()
+                            .unwrap()
+                            .into_iter()
+                            .map(|name| Template::Custom(name))
+                            .collect();
 
                         *screen_state = ScreenState::CreateProject;
                     }

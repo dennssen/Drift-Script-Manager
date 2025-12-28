@@ -4,11 +4,18 @@ use crate::project::drift_project::DriftProject;
 use crate::gui::fonts::Fonts;
 use crate::managers;
 use managers::git::has_git;
-use managers::template::{get_custom_templates, EmbeddedTemplate, Template};
+use managers::template::{EmbeddedTemplate, Template};
 use crate::gui::ui::{CreateData, ScreenState};
 use crate::utils::ui_helpers::{create_imgui_window, directory_input};
 
-pub fn create_project_screen(ui: &Ui, screen_state: &mut ScreenState, create_data: &mut CreateData, project: &mut DriftProject, fonts: &Fonts) -> io::Result<()> {
+pub fn create_project_screen(
+    ui: &mut Ui,
+    screen_state: &mut ScreenState,
+    create_data: &mut CreateData,
+    project: &mut DriftProject,
+    custom_templates: &Vec<Template>,
+    fonts: &Fonts
+) -> io::Result<()> {
     create_imgui_window(ui, "Creating Project...")
         .build(|| {
             let push = ui.push_font(fonts.header_font);
@@ -25,14 +32,8 @@ pub fn create_project_screen(ui: &Ui, screen_state: &mut ScreenState, create_dat
                 .map(|t| Template::Embedded(*t))
                 .collect();
 
-            let custom_template_names: Vec<Template> = get_custom_templates()
-                .unwrap()
-                .into_iter()
-                .map(|name| Template::Custom(name.clone()))
-                .collect();
-
             if let Some(_) = ui.begin_combo("Template", &create_data.template.name()) {
-                for template in embedded_template_names.iter().chain(custom_template_names.iter()) {
+                for template in embedded_template_names.iter().chain(custom_templates.iter()) {
                     let selected: bool = create_data.template.name() == template.name();
                     if selected {
                         ui.set_item_default_focus();

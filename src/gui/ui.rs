@@ -11,6 +11,7 @@ use utils::ui_helpers::{create_imgui_window};
 use utils::dialogs::{error_dialog, warn_dialog};
 use imgui::sys::{igGetMainViewport, igSetNextWindowPos, igSetNextWindowSize, ImGuiCond, ImGuiViewport, ImVec2};
 use imgui::Ui;
+use crate::managers::template::Template;
 
 pub enum ScreenState {
     MainMenu,
@@ -27,7 +28,8 @@ pub enum ScreenState {
 pub struct GuiInfo {
     screen_state: ScreenState,
     screen_data: ScreenData,
-    projects: ProjectsData
+    projects: ProjectsData,
+    custom_templates: Vec<Template>
 }
 
 impl GuiInfo {
@@ -35,7 +37,8 @@ impl GuiInfo {
         Self {
             screen_state: ScreenState::MainMenu,
             screen_data: ScreenData::new(),
-            projects: ProjectsData::new()
+            projects: ProjectsData::new(),
+            custom_templates: vec![],
         }
     }
 }
@@ -53,10 +56,23 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
 
     match gui_info.screen_state {
         ScreenState::MainMenu => {
-            main_menu_screen(ui, &mut gui_info.screen_state, &mut gui_info.projects.build_project, &mut gui_info.projects.edit_project, fonts);
+            main_menu_screen(
+                ui,
+                &mut gui_info.screen_state,
+                &mut gui_info.projects.build_project,
+                &mut gui_info.projects.edit_project,
+                fonts
+            );
         }
         ScreenState::SetProjectInfo => {
-            project_info_screen(ui, &mut gui_info.screen_state, &mut gui_info.projects.new_project_info, ProjectMode::New, fonts);
+            project_info_screen(
+                ui,
+                &mut gui_info.screen_state,
+                &mut gui_info.projects.new_project_info,
+                ProjectMode::New,
+                &mut gui_info.custom_templates,
+                fonts
+            );
         }
         ScreenState::EditProjectInfo => {
             if gui_info.projects.edit_project.is_none() {
@@ -65,7 +81,14 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
                 return;
             }
 
-            project_info_screen(ui, &mut gui_info.screen_state, gui_info.projects.edit_project.as_mut().unwrap(), ProjectMode::Edit, fonts);
+            project_info_screen(
+                ui,
+                &mut gui_info.screen_state,
+                gui_info.projects.edit_project.as_mut().unwrap(),
+                ProjectMode::Edit,
+                &mut gui_info.custom_templates,
+                fonts
+            );
         }
         ScreenState::SetBuildInfo => {
             if gui_info.projects.build_project.is_none() {
@@ -74,10 +97,16 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
                 return;
             }
 
-            build_project_screen(ui, &mut gui_info.screen_state, &mut gui_info.screen_data.build_data, gui_info.projects.build_project.as_mut().unwrap(), fonts);
+            build_project_screen(
+                ui,
+                &mut gui_info.screen_state,
+                &mut gui_info.screen_data.build_data,
+                gui_info.projects.build_project.as_mut().unwrap(),
+                fonts
+            );
         }
         ScreenState::CreateProject => {
-            if let Err(e) = create_project_screen(ui, &mut gui_info.screen_state, &mut gui_info.screen_data.create_data, &mut gui_info.projects.new_project_info, fonts) {
+            if let Err(e) = create_project_screen(ui, &mut gui_info.screen_state, &mut gui_info.screen_data.create_data, &mut gui_info.projects.new_project_info, &gui_info.custom_templates, fonts) {
                 error_dialog("Error", "Error:", &e);
                 gui_info.screen_state = ScreenState::MainMenu;
             }
