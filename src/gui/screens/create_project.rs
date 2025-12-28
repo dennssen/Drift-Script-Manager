@@ -24,7 +24,9 @@ pub fn create_project_screen(
 
             ui.new_line();
             ui.new_line();
-            ui.input_text("Directory Name", &mut project.directory_name).build();
+            ui.input_text("Directory Name", &mut project.directory_name)
+                .chars_noblank(true)
+                .build();
             directory_input(ui, "Project Location", &mut project.project_location);
 
             let embedded_template_names: Vec<Template> = EmbeddedTemplate::all()

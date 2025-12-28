@@ -84,7 +84,7 @@ pub fn project_info_screen(
                             drift_project.package_info.script_name = suggested_script_name;
                         }
 
-                        drift_project.directory_name = drift_project.package_info.project_name.clone();
+                        drift_project.directory_name = drift_project.package_info.project_name.replace(" ", "-");
 
                         *custom_templates = get_custom_templates()
                             .unwrap()
