@@ -149,7 +149,8 @@ jobs:
 
       - name: Rename AppImage
         run: |
-          set -euo pipefail APPIMAGE=$(ls *.AppImage | grep -v '^linuxdeploy' | head -n1)
+          set -euo pipefail
+          APPIMAGE=$(ls *.AppImage | grep -v '^linuxdeploy' | head -n1)
           echo "Found $APPIMAGE"
           mv "$APPIMAGE" Drift-Script-Manager-x86_64.AppImage
 
