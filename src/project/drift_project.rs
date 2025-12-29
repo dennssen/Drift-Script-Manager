@@ -66,7 +66,7 @@ impl ProjectPaths {
         }
 
         paths.directory_name = get_path_file_name(&paths.project_path).unwrap_or("").to_string();
-        if paths.directory_name != "Behaviors" {
+        if paths.directory_name == "Behaviors" {
             return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the project directory. Please create a separate parent directory for your script and try again."))
         }
 
@@ -448,7 +448,7 @@ mod tests {
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
 
-        assert!(result.is_ok(), "Result should be Ok");
+        assert!(result.is_ok(), "Result should be Ok. Err: {}", result.unwrap_err());
 
         let result = result.unwrap();
         assert_eq!(result.directory_name, project_name, "Directory name should be project name");
@@ -465,7 +465,7 @@ mod tests {
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
 
-        assert!(result.is_ok(), "Result should be Ok");
+        assert!(result.is_ok(), "Result should be Ok. Err: {}", result.unwrap_err());
 
         let result = result.unwrap();
         assert!(!result.build_path.exists(), "Builds path should not exist");
