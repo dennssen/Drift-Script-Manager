@@ -11,9 +11,22 @@ pub struct AppData {
     pub keywords: Vec<String>,
 }
 
+static APP_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
+
 static APP_DATA: OnceLock<Mutex<AppData>> = OnceLock::new();
 
 impl AppData {
+    pub fn get_dir() -> &'static PathBuf {
+        APP_DATA_DIR.get_or_init(|| {
+            let dir = dirs::data_dir().unwrap().join("DriftScriptManager");
+            if !dir.exists() {
+                fs::create_dir(&dir).unwrap_or_default();
+            }
+
+            dir
+        })
+    }
+
     pub fn new() -> Self {
         Self {
             keywords: vec![
@@ -33,13 +46,11 @@ impl AppData {
     }
 
     pub fn load_or_create() -> Self {
-        let appdata_parent_path: PathBuf = dirs::data_dir().unwrap().join("DriftScriptManager");
+        let appdata_dir: &PathBuf = Self::get_dir();
 
-        if !appdata_parent_path.exists() {
-            fs::create_dir(dirs::data_dir().unwrap().join("DriftScriptManager")).unwrap_or_default();
-        }
+        assert!(appdata_dir.exists());
 
-        let appdata_path: PathBuf = appdata_parent_path.join("data.json");
+        let appdata_path: PathBuf = appdata_dir.join("data.json");
 
         if !appdata_path.exists() {
             return Self::new();
