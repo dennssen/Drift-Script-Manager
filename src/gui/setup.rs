@@ -92,7 +92,7 @@ pub fn glow_context(context: &PossiblyCurrentContext) -> glow::Context {
 
 pub fn imgui_init(window: &Window) -> (WinitPlatform, imgui::Context, Fonts) {
     let mut imgui_context = imgui::Context::create();
-    imgui_context.set_ini_filename(None);
+    imgui_context.set_ini_filename(Some(data::AppData::get_dir().clone().join("imgui.ini")));
 
     let mut winit_platform = WinitPlatform::new(&mut imgui_context);
     winit_platform.attach_window(
