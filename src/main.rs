@@ -15,9 +15,6 @@ use gui::setup::{imgui_init, create_window, glow_context};
 use managers::data::get_app_data;
 
 fn main() {
-    // Common setup for creating a winit window and imgui context, not specific
-    // to this renderer at all except that glutin is used to create the window
-    // since it will give us access to a GL context
     let (event_loop, window, surface, context) = create_window();
     let (mut winit_platform, mut imgui_context, fonts) = imgui_init(&window);
 
@@ -78,6 +75,10 @@ fn main() {
                     event: winit::event::WindowEvent::CloseRequested,
                     ..
                 } => {
+                    let mut final_app_data = get_app_data().lock().unwrap();
+                    final_app_data.outer_window_pos = Some(window.outer_position().unwrap());
+                    final_app_data.save();
+
                     window_target.exit();
                 }
                 winit::event::Event::WindowEvent {
@@ -99,8 +100,5 @@ fn main() {
             }
         })
         .expect("EventLoop error");
-
-    let final_app_data = get_app_data().lock().unwrap();
-    final_app_data.save();
 }
 

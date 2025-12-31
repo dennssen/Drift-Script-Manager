@@ -6,13 +6,16 @@ use glutin::surface::{Surface, SurfaceAttributesBuilder, WindowSurface};
 use imgui::FontId;
 use imgui_winit_support::WinitPlatform;
 use raw_window_handle::HasWindowHandle;
-use winit::dpi::LogicalSize;
+use winit::dpi::{LogicalSize, PhysicalPosition};
 use winit::event_loop::EventLoop;
 use winit::window::{Icon, Window, WindowAttributes, WindowButtons};
 #[cfg(target_os = "windows")]
 use winit::platform::windows::WindowAttributesExtWindows;
-use crate::gui::fonts;
-use crate::gui::fonts::Fonts;
+use crate::gui;
+use gui::fonts;
+use gui::fonts::Fonts;
+use crate::managers::data;
+use data::get_app_data;
 use crate::utils::ui_helpers::roboto_font;
 
 #[cfg(target_os = "windows")]
@@ -28,6 +31,8 @@ pub fn create_window() -> (
     Surface<WindowSurface>,
     PossiblyCurrentContext,
 ) {
+    let app_data = get_app_data().lock().unwrap();
+
     let event_loop = EventLoop::new().unwrap();
 
     let window_icon = load_icon(ICON_32);
@@ -47,6 +52,12 @@ pub fn create_window() -> (
         window_attributes = window_attributes.with_taskbar_icon(taskbar_icon);
     }
 
+    let has_saved_window_pos = app_data.outer_window_pos.is_some();
+
+    if has_saved_window_pos {
+        window_attributes = window_attributes.with_position(app_data.outer_window_pos.unwrap());
+    }
+
     let (window, cfg) = glutin_winit::DisplayBuilder::new()
         .with_window_attributes(Some(window_attributes))
         .build(&event_loop, ConfigTemplateBuilder::new(), |mut configs| {
@@ -55,6 +66,15 @@ pub fn create_window() -> (
         .expect("Failed to create OpenGL window");
 
     let window = window.unwrap();
+
+    if !has_saved_window_pos && let Some(monitor) = window.primary_monitor() {
+        let monitor_pos = monitor.position();
+        let monitor_size = monitor.size();
+
+        let x = monitor_pos.x + (monitor_size.width as i32 / 2) - (INITIAL_WIDTH as i32 / 2);
+        let y = monitor_pos.y + (monitor_size.height as i32 / 2) - (INITIAL_HEIGHT as i32 / 2);
+        window.set_outer_position(PhysicalPosition::new(x, y));
+    }
 
     let context_attribs =
         ContextAttributesBuilder::new().build(Some(window.window_handle().unwrap().as_raw()));

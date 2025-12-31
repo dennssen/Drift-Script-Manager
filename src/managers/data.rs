@@ -3,11 +3,14 @@ use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 use capitalize::Capitalize;
 use serde::{Deserialize, Serialize};
+use winit::dpi::PhysicalPosition;
 use crate::utils::dialogs::error_dialog;
 use crate::utils::error_helper::json_error_to_io;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AppData {
+    #[serde(default)]
+    pub outer_window_pos: Option<PhysicalPosition<i32>>,
     pub keywords: Vec<String>,
 }
 
@@ -29,6 +32,7 @@ impl AppData {
 
     pub fn new() -> Self {
         Self {
+            outer_window_pos: None,
             keywords: vec![
                 String::from("POV"),
                 String::from("Framework"),
@@ -124,9 +128,8 @@ mod tests {
 
     #[test]
     fn test_update_keywords_no_empty() {
-        let mut app_data = AppData {
-            keywords: vec![String::from("Existing keyword")]
-        };
+        let mut app_data = AppData::new();
+        app_data.keywords = vec![String::from("Existing keyword")];
 
         let new_keywords = vec![String::new()];
 
@@ -139,9 +142,8 @@ mod tests {
 
     #[test]
     fn test_update_keywords_no_duplicates() {
-        let mut app_data = AppData {
-            keywords: vec![String::from("Existing keyword")]
-        };
+        let mut app_data = AppData::new();
+        app_data.keywords = vec![String::from("Existing keyword")];
 
         let new_keywords = vec![String::from("Existing keyword")];
 
