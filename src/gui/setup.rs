@@ -31,27 +31,22 @@ pub fn create_window() -> (
     let event_loop = EventLoop::new().unwrap();
 
     let window_icon = load_icon(ICON_32);
-
     #[cfg(target_os = "windows")]
     let taskbar_icon = load_icon(ICON_256);
-    #[cfg(target_os = "windows")]
-    let window_attributes = WindowAttributes::default()
+
+    let mut window_attributes = WindowAttributes::default()
         .with_title(TITLE)
         .with_window_icon(window_icon)
-        .with_taskbar_icon(taskbar_icon)
-        .with_inner_size(LogicalSize::new(1024, 768))
+        .with_inner_size(LogicalSize::new(INITIAL_WIDTH, INITIAL_HEIGHT))
         .with_resizable(false)
         .with_maximized(false)
         .with_enabled_buttons(WindowButtons::all() & !WindowButtons::MAXIMIZE);
 
-    #[cfg(target_os = "linux")]
-    let window_attributes = WindowAttributes::default()
-        .with_title(TITLE)
-        .with_window_icon(window_icon)
-        .with_inner_size(LogicalSize::new(1024, 768))
-        .with_resizable(false)
-        .with_maximized(false)
-        .with_enabled_buttons(WindowButtons::all() & !WindowButtons::MAXIMIZE);
+    #[cfg(target_os = "windows")]
+    {
+        window_attributes = window_attributes.with_taskbar_icon(taskbar_icon);
+    }
+
     let (window, cfg) = glutin_winit::DisplayBuilder::new()
         .with_window_attributes(Some(window_attributes))
         .build(&event_loop, ConfigTemplateBuilder::new(), |mut configs| {
