@@ -1,4 +1,3 @@
-use std::io::Result;
 use imgui::{StyleVar, Ui};
 use crate::gui::ui::{ScreenState};
 use crate::gui::fonts::Fonts;
@@ -62,11 +61,9 @@ pub fn main_menu_screen(ui: &mut Ui, screen_state: &mut ScreenState, build_proje
 fn set_build_screen(screen_state: &mut ScreenState, build_project: &mut Option<DriftProject>) {
     *screen_state = ScreenState::SetBuildInfo;
 
-    let drift_project: Result<DriftProject> = try_get_project();
+    let drift_project: Option<DriftProject> = try_get_project();
 
-    if drift_project.is_err() {
-        warn_dialog("File Dialog Failure", drift_project.unwrap_err().to_string().as_str());
-
+    if drift_project.is_none() {
         *screen_state = ScreenState::MainMenu;
         return;
     }
@@ -77,11 +74,9 @@ fn set_build_screen(screen_state: &mut ScreenState, build_project: &mut Option<D
 fn set_edit_screen(screen_state: &mut ScreenState, edit_project: &mut Option<DriftProject>) {
     *screen_state = ScreenState::EditProjectInfo;
 
-    let drift_project: Result<DriftProject> = try_get_project();
+    let drift_project: Option<DriftProject> = try_get_project();
 
-    if drift_project.is_err() {
-        warn_dialog("File Dialog Failure", drift_project.unwrap_err().to_string().as_str());
-
+    if drift_project.is_none() {
         *screen_state = ScreenState::MainMenu;
         return;
     }
@@ -89,14 +84,21 @@ fn set_edit_screen(screen_state: &mut ScreenState, edit_project: &mut Option<Dri
     *edit_project = Some(drift_project.unwrap());
 }
 
-fn try_get_project() -> Result<DriftProject> {
+fn try_get_project() -> Option<DriftProject> {
     let (package_info, package_path) = PackageInfo::get_package_file()?;
 
-    let project_paths: ProjectPaths = ProjectPaths::validate_project_structure(package_path, &package_info)?;
+    let validate_result = ProjectPaths::validate_project_structure(package_path, &package_info);
+
+    if let Err(e) = validate_result {
+        warn_dialog("File Dialog Failure", e.to_string().as_str());
+        return None
+    }
+
+    let project_paths: ProjectPaths = validate_result.unwrap();
 
     let project: DriftProject = DriftProject::project_from_package(package_info, project_paths);
 
     let mut app_data = get_app_data().lock().unwrap();
     app_data.update_keywords(&project.package_info.keywords);
-    Ok(project)
+    Some(project)
 }

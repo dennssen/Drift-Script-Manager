@@ -3,6 +3,8 @@ use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
+use crate::managers::data::get_app_data;
+use crate::utils::dialogs::error_dialog;
 use crate::utils::error_helper::json_error_to_io;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -34,21 +36,34 @@ impl PackageInfo {
         }
     }
 
-    pub fn get_package_file() -> Result<(PackageInfo, PathBuf), Error> {
+    pub fn get_package_file() -> Option<(PackageInfo, PathBuf)> {
+        let mut app_data = get_app_data().lock().unwrap();
+
         let package_path = FileDialog::new()
+            .set_directory(&app_data.last_project_location)
             .add_filter("Script package", &["json"])
             .set_title("Open the projects package.json")
             .pick_file();
 
-        PackageInfo::package_info_from_file(package_path)
-    }
-    fn package_info_from_file(package_path: Option<PathBuf>) -> Result<(PackageInfo, PathBuf), Error> {
         if package_path.is_none() {
-            return Err(Error::new(ErrorKind::NotFound, "No path specified"))
+            return None
         }
-    
-        let package_path: PathBuf = package_path.unwrap();
-    
+
+        let package_path = package_path.unwrap();
+
+        app_data.last_project_location = package_path.parent().unwrap().to_path_buf();
+
+        let result = PackageInfo::package_info_from_file(package_path);
+
+        if let Err(e) = result {
+            error_dialog("Package Error", "Failed to get package.json", &e);
+            None
+        } else {
+            Some(result.unwrap())
+        }
+    }
+
+    fn package_info_from_file(package_path: PathBuf) -> Result<(PackageInfo, PathBuf), Error> {
         if !package_path.exists() {
             return Err(Error::new(ErrorKind::NotFound, "Could not find package.json"))
         }
@@ -88,7 +103,7 @@ mod tests {
         let test_package_path = temp.path().join("package.json");
         write(&test_package_path, serde_json::to_string(&test_package).unwrap()).unwrap();
 
-        let result = PackageInfo::package_info_from_file(Some(test_package_path));
+        let result = PackageInfo::package_info_from_file(test_package_path);
         assert!(result.is_ok());
         
         let (package, _) = result.unwrap();

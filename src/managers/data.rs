@@ -12,6 +12,8 @@ pub struct AppData {
     #[serde(default)]
     pub outer_window_pos: Option<PhysicalPosition<i32>>,
     pub keywords: Vec<String>,
+    #[serde(default)]
+    pub last_project_location: PathBuf,
 }
 
 static APP_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
@@ -45,7 +47,8 @@ impl AppData {
                 String::from("Driftblitz"),
                 String::from("Go Pro"),
                 String::from("Content Creation")
-            ]
+            ],
+            last_project_location: PathBuf::new(),
         }
     }
 
