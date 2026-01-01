@@ -2,19 +2,10 @@ use std::collections::HashSet;
 use std::ffi::CString;
 use std::path::PathBuf;
 use std::ptr::null;
-use imgui::{FontSource, Ui, Window};
+use imgui::{Ui, Window};
 use imgui::sys::{igBeginListBox, igCalcTextSize, igEndListBox, igGetWindowWidth, igSelectable_Bool, ImVec2};
 use rfd::FileDialog;
-
-const FONT_PATH: &[u8] = include_bytes!("../../assets/fonts/Roboto-VariableFont_wdth,wght.ttf");
-
-pub fn roboto_font(font_size: f32) -> FontSource<'static> {
-    FontSource::TtfData {
-        data: FONT_PATH,
-        size_pixels: font_size,
-        config: None
-    }
-}
+use crate::utils::icons;
 
 pub fn text_center_spacing(text: &str) -> f32 {
     let text_cstring = CString::new(text).expect("Label must not contain null bytes");
@@ -48,7 +39,7 @@ pub fn directory_input(ui: &Ui, label: &str, directory_path: &mut PathBuf) {
     });
 
     ui.same_line();
-    if ui.button(" / ") {
+    if ui.button(icons::FOLDER_OPEN) {
         if let Some(new_directory) = FileDialog::new().pick_folder() {
             *directory_path = new_directory;
         }

@@ -1,4 +1,7 @@
-use imgui::FontId;
+use imgui::{FontConfig, FontGlyphRanges, FontId, FontSource};
+
+pub const ROBOTO_PATH: &[u8] = include_bytes!("../../assets/fonts/Roboto-VariableFont_wdth,wght.ttf");
+pub const ICON_PATH: &[u8] = include_bytes!("../../assets/fonts/FontAwesome.otf");
 
 pub const MAIN_SIZE: f32 = 26.0;
 pub const TITLE_SIZE: f32 = 94.0;
@@ -29,5 +32,24 @@ impl Fonts {
             big_font,
             medium_font,
         }
+    }
+}
+
+pub fn roboto_font(font_size: f32) -> FontSource<'static> {
+    FontSource::TtfData {
+        data: ROBOTO_PATH,
+        size_pixels: font_size,
+        config: None
+    }
+}
+
+pub fn icon_font(size: f32) -> FontSource<'static> {
+    FontSource::TtfData {
+        data: ICON_PATH,
+        size_pixels: size,
+        config: Some(FontConfig {
+            glyph_ranges: FontGlyphRanges::from_slice(&[0xf000, 0xf3ff, 0]),
+            ..Default::default()
+        }),
     }
 }

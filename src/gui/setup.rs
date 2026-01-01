@@ -13,10 +13,9 @@ use winit::window::{Icon, Window, WindowAttributes, WindowButtons};
 use winit::platform::windows::WindowAttributesExtWindows;
 use crate::gui;
 use gui::fonts;
-use gui::fonts::Fonts;
+use gui::fonts::{Fonts, roboto_font, icon_font};
 use crate::managers::data;
 use data::get_app_data;
-use crate::utils::ui_helpers::roboto_font;
 
 #[cfg(target_os = "windows")]
 const ICON_256: &[u8] = include_bytes!("../../assets/logo/256.png");
@@ -123,19 +122,38 @@ pub fn imgui_init(window: &Window) -> (WinitPlatform, imgui::Context, Fonts) {
 
     let main_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(fonts::MAIN_SIZE)]);
+        .add_font(&[
+            roboto_font(fonts::MAIN_SIZE),
+            icon_font(fonts::MAIN_SIZE),
+        ]);
+
     let title_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(fonts::TITLE_SIZE)]);
+        .add_font(&[
+            roboto_font(fonts::TITLE_SIZE),
+            icon_font(fonts::TITLE_SIZE),
+        ]);
+
     let header_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(fonts::HEADER_SIZE)]);
+        .add_font(&[
+            roboto_font(fonts::HEADER_SIZE),
+            icon_font(fonts::HEADER_SIZE),
+        ]);
+
     let big_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(fonts::BIG_SIZE)]);
+        .add_font(&[
+            roboto_font(fonts::BIG_SIZE),
+            icon_font(fonts::BIG_SIZE),
+        ]);
+
     let medium_font: FontId = imgui_context
         .fonts()
-        .add_font(&[roboto_font(fonts::MEDIUM_SIZE)]);
+        .add_font(&[
+            roboto_font(fonts::MEDIUM_SIZE),
+            icon_font(fonts::MEDIUM_SIZE),
+        ]);
 
     let fonts: Fonts = Fonts::new(main_font, title_font, header_font, big_font, medium_font);
     imgui_context.style_mut().frame_padding = [4.0, 6.0];
