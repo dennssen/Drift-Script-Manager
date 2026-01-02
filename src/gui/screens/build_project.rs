@@ -1,10 +1,10 @@
 use imgui::Ui;
 use crate::project::drift_project::DriftProject;
 use crate::gui::fonts::Fonts;
-use crate::gui::ui::{BuildData, ScreenState};
+use crate::gui::ui::{BuildProjectData, ScreenState};
 use crate::utils::ui_helpers::{create_imgui_window, directory_input};
 
-pub fn build_project_screen(ui: &Ui, screen_state: &mut ScreenState, build_data: &mut BuildData, project: &mut DriftProject, fonts: &Fonts) {
+pub fn build_project_screen(ui: &Ui, screen_state: &mut ScreenState, build_data: &mut BuildProjectData, project: &mut DriftProject, fonts: &Fonts) {
     create_imgui_window(ui, "Building Project...")
         .build(|| {
             let font = ui.push_font(fonts.header_font);
@@ -28,7 +28,7 @@ pub fn build_project_screen(ui: &Ui, screen_state: &mut ScreenState, build_data:
             ui.new_line();
 
             if ui.button("Back") {
-                *build_data = BuildData::default();
+                *build_data = BuildProjectData::default();
                 *screen_state = ScreenState::MainMenu;
             }
             ui.same_line();

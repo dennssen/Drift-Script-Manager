@@ -7,7 +7,7 @@ use zip::ZipWriter;
 use zip_extensions::ZipWriterExtensions;
 use lazy_static::lazy_static;
 use crate::managers::git::create_local_repo;
-use crate::gui::state::{BuildData, CreateData};
+use crate::gui::state::{BuildProjectData, CreateProjectData};
 use crate::managers::template::copy_template;
 use crate::project::package_info::PackageInfo;
 use crate::utils::dialogs::{error_dialog, warn_dialog};
@@ -158,7 +158,7 @@ impl DriftProject {
         Ok(())
     }
 
-    pub fn create_project_files(&mut self, create_data: &CreateData) -> io::Result<()> {
+    pub fn create_project_files(&mut self, create_data: &CreateProjectData) -> io::Result<()> {
         self.project_path = self.project_location.join(&self.directory_name);
         self.build_path = self.project_path.join("Builds");
         self.script_path = self.project_path.join(&self.package_info.script_name);
@@ -322,7 +322,7 @@ impl DriftProject {
         Ok(())
     }
 
-    pub fn build(&self, build_data: &BuildData) {
+    pub fn build(&self, build_data: &BuildProjectData) {
         let mut zip_file_name = self.package_info.script_name.clone();
 
         if build_data.version_tag {
@@ -539,7 +539,7 @@ mod tests {
         package_info.script_name = script_name("Me", "Project");
         package_info.main = "main.luau".to_string();
 
-        let create_data: CreateData = CreateData {
+        let create_data: CreateProjectData = CreateProjectData {
             open_directory: false,
             create_repo: false,
             template: Template::Embedded(EmbeddedTemplate::Default)

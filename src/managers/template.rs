@@ -3,6 +3,7 @@ use std::io;
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use include_dir::include_dir;
+use crate::gui::state::CreateTemplateData;
 
 #[derive(Clone)]
 pub enum Template {
@@ -16,6 +17,14 @@ impl Template {
             Self::Embedded(t) => t.name().to_string(),
             Self::Custom(name) => name.clone()
         }
+    }
+    
+    pub fn create_custom_template(create_data: &CreateTemplateData, existing_templates: &Vec<Template>) -> io::Result<PathBuf> {
+        if let Err(e) = create_data.has_sufficient_info(existing_templates) {
+            return Err(e)
+        }
+        
+        Ok(get_custom_templates_dir())
     }
 }
 

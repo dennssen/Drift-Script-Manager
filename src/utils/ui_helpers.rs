@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::ffi::CString;
 use std::path::PathBuf;
 use std::ptr::null;
-use imgui::{Ui, Window};
+use imgui::{StyleVar, Ui, Window};
 use imgui::sys::{igBeginListBox, igCalcTextSize, igEndListBox, igGetWindowWidth, igSelectable_Bool, ImVec2};
 use rfd::FileDialog;
 use crate::utils::icons;
@@ -102,7 +102,7 @@ pub fn keyword_list_box(
     });
 }
 
-fn list_box<F>(label: &str, size: ImVec2, f: F)
+pub fn list_box<F>(label: &str, size: ImVec2, f: F)
 where
     F: FnOnce()
 {
@@ -121,7 +121,7 @@ where
     }
 }
 
-fn selectable<F>(label: &str, is_selected: bool, size: ImVec2, f: F)
+pub fn selectable<F>(label: &str, is_selected: bool, size: ImVec2, f: F)
 where
     F: FnOnce()
 {
@@ -134,4 +134,19 @@ where
     if active {
         f();
     }
+}
+
+pub fn main_menu_style<F>(ui: &Ui, f: F)
+where 
+    F: FnOnce()
+{
+    let style_push1 = ui.push_style_var(StyleVar::ItemSpacing([8.0, 10.0]));
+    let style_push2 = ui.push_style_var(StyleVar::FrameRounding(10.0));
+    let style_push3 = ui.push_style_var(StyleVar::FramePadding([10.0, 12.0]));
+    
+    f();
+    
+    style_push1.end();
+    style_push2.end();
+    style_push3.end();
 }

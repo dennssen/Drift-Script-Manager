@@ -1,4 +1,4 @@
-pub use crate::gui::state::{BuildData, ScreenData, ProjectsData, CreateData};
+pub use crate::gui::state::{BuildProjectData, ScreenData, ProjectsData, CreateProjectData};
 use crate::gui::fonts::Fonts;
 use crate::gui::screens::project_info::{project_info_screen, ProjectMode};
 use crate::gui::screens::save_project::save_project_edit;
@@ -11,6 +11,8 @@ use utils::ui_helpers::{create_imgui_window};
 use utils::dialogs::{error_dialog, warn_dialog};
 use imgui::sys::{igGetMainViewport, igSetNextWindowPos, igSetNextWindowSize, ImGuiCond, ImGuiViewport, ImVec2};
 use imgui::Ui;
+use crate::gui::screens::new_template::new_template_screen;
+use crate::gui::state::CreateTemplateData;
 use crate::managers::template::Template;
 
 pub enum ScreenState {
@@ -22,14 +24,17 @@ pub enum ScreenState {
     BuildingProject,
     EditProjectInfo,
     SavingProjectInfo,
-    TemplateInfo,
+    CustomTemplates,
+    NewTemplate,
+    EditTemplates,
 }
 
 pub struct GuiInfo {
     screen_state: ScreenState,
     screen_data: ScreenData,
     projects: ProjectsData,
-    custom_templates: Vec<Template>
+    custom_templates: Vec<Template>,
+    create_template_data: CreateTemplateData,
 }
 
 impl GuiInfo {
@@ -39,6 +44,7 @@ impl GuiInfo {
             screen_data: ScreenData::new(),
             projects: ProjectsData::new(),
             custom_templates: vec![],
+            create_template_data: CreateTemplateData::default(),
         }
     }
 }
@@ -125,7 +131,7 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
             }
 
             gui_info.projects.new_project_info.reset_project_data();
-            gui_info.screen_data.create_data = CreateData::default();
+            gui_info.screen_data.create_data = CreateProjectData::default();
             gui_info.screen_state = ScreenState::MainMenu;
         }
         ScreenState::SavingProjectInfo => {
@@ -159,11 +165,17 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
             });
 
             gui_info.projects.build_project.as_ref().unwrap().build(&gui_info.screen_data.build_data);
-            gui_info.screen_data.build_data = BuildData::default();
+            gui_info.screen_data.build_data = BuildProjectData::default();
             gui_info.screen_state = ScreenState::MainMenu;
         }
-        ScreenState::TemplateInfo => {
-            custom_templates_window(ui, &mut gui_info.screen_state, fonts)
+        ScreenState::CustomTemplates => {
+            custom_templates_window(ui, &mut gui_info.screen_state, &mut gui_info.custom_templates, fonts)
+        }
+        ScreenState::NewTemplate => {
+            new_template_screen(ui, &mut gui_info.screen_state, &mut gui_info.create_template_data, &gui_info.custom_templates);
+        }
+        ScreenState::EditTemplates => {
+            
         }
     }
 

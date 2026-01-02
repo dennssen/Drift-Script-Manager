@@ -1,68 +1,55 @@
-use std::fs;
-use std::io::{Error, ErrorKind};
 use imgui::Ui;
-use opener::OpenError;
 use crate::gui::ui::ScreenState;
 use crate::gui::fonts::Fonts;
-use crate::managers::template::get_custom_templates_dir;
+use crate::managers::template::{get_custom_templates, Template};
 use crate::utils::dialogs::error_dialog;
-use crate::utils::ui_helpers::create_imgui_window;
+use crate::utils::ui_helpers::{create_imgui_window, main_menu_style, text_center_spacing};
 
-pub fn custom_templates_window(ui: &mut Ui, screen_state: &mut ScreenState, fonts: &Fonts) {
+pub fn custom_templates_window(ui: &mut Ui, screen_state: &mut ScreenState, existing_templates: &mut Vec<Template>, fonts: &Fonts) {
     create_imgui_window(ui, "Custom Templates")
         .build(|| {
-            let header_text: &str = "Templates Info";
-            let push = ui.push_font(fonts.header_font);
-            ui.text(header_text);
+            let title_text: &str = "Custom Templates";
+            let push = ui.push_font(fonts.title_font);
+            ui.same_line_with_pos(text_center_spacing(title_text));
+            ui.text(title_text);
             push.end();
 
-            ui.new_line();
+            let new_text: &str = "New Template";
+            let edit_text: &str = "Edit Templates";
+            let back_text: &str = "Main Menu";
 
-            ui.text("Custom Templates allow you to create your own reusable project structures. \
-                    \nWhen you click the 'Open Folder' button, a folder will open where you can \
-                    \ncreate new template directories. \
-                    \n\nTo create a custom template, simply create a new folder \
-                    \nwith your template name and add any files and folders you'd like to include in your projects. \
-                    \nIf you include a main.luau file, it will be automatically linked to your project - otherwise, \
-                    \nit's optional. You can organize your files however you like with as many subfolders as needed. \
-                    \nOnce you've set up your template, it will automatically appear in the template selector \
-                    \nthe next time you create a project.");
+            for _ in 1..6 {
+                ui.new_line();
+            }
 
-            ui.new_line();
-
-            if ui.button("Open folder") {
-                let templates_path = get_custom_templates_dir();
-                if !templates_path.exists() {
-                    let result = fs::create_dir_all(&templates_path);
+            main_menu_style(ui, || {
+                let push = ui.push_font(fonts.big_font);
+                ui.same_line_with_pos(text_center_spacing(new_text));
+                if ui.button(new_text) {
+                    let result = get_custom_templates();
                     if let Err(e) = result {
-                        error_dialog("Error", "Failed to create templates path", &e);
-                        return;
+                        error_dialog("Get Templates Failure", "Failed to get custom templates", &e);
+                    } else {
+                        *existing_templates = result
+                            .unwrap()
+                            .into_iter()
+                            .map(|name| Template::Custom(name))
+                            .collect();
+                        *screen_state = ScreenState::NewTemplate;
                     }
+                    
                 }
-
-                let result = opener::open(&templates_path);
-                if let Err(e) = result {
-                    let e = match e {
-                        OpenError::Io(e) => {
-                            e
-                        }
-                        OpenError::Spawn {cmds, source } => {
-                            Error::new(source.kind(), format!("cmds: {}, Err: {}", cmds, source))
-                        }
-                        OpenError::ExitStatus {cmd, status, stderr} => {
-                            Error::new(ErrorKind::Other, format!("cmd: {}, status: {}, stderr: {}", cmd, status, stderr))
-                        }
-                        _ => {
-                            Error::new(ErrorKind::Other, "panic!")
-                        }
-                    };
-                    error_dialog("Error", "Failed to open templates path", &e);
-                    return;
+                ui.new_line();
+                ui.same_line_with_pos(text_center_spacing(edit_text));
+                if ui.button(edit_text) {
+                    // TODO: Edit templates screen
                 }
-            }
-            ui.same_line();
-            if ui.button("back") {
-                *screen_state = ScreenState::MainMenu;
-            }
+                ui.new_line();
+                ui.same_line_with_pos(text_center_spacing(back_text));
+                if ui.button(back_text) {
+                    *screen_state = ScreenState::MainMenu;
+                }
+                push.end();
+            });
         });
 }
