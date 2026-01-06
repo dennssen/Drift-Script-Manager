@@ -1,5 +1,5 @@
-use std::fs::{create_dir_all, read_dir};
-use std::io;
+use std::fs::{create_dir, create_dir_all, read_dir};
+use std::{fs, io};
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use include_dir::include_dir;
@@ -19,12 +19,28 @@ impl Template {
         }
     }
     
-    pub fn create_custom_template(create_data: &CreateTemplateData, existing_templates: &Vec<Template>) -> io::Result<PathBuf> {
+    pub fn create_custom_template(create_data: &CreateTemplateData, existing_templates: &Vec<Template>) -> io::Result<(PathBuf, Option<String>)> {
         if let Err(e) = create_data.has_sufficient_info(existing_templates) {
             return Err(e)
         }
+
+        let templates_dir = get_custom_templates_dir();
+
+        if !templates_dir.exists() {
+            create_dir_all(&templates_dir)?;
+        }
+
+        let new_template_path = templates_dir.join(&create_data.template_name);
+        create_dir(&new_template_path)?;
+
+        let mut warning = None;
+        if create_data.create_main {
+            if let Err(e) = fs::write(new_template_path.join("main.luau"), "") {
+                warning = Some(format!("Failed to create main.luau.\nContinuing anyways.\nError: {}", e))
+            }
+        }
         
-        Ok(get_custom_templates_dir())
+        Ok((new_template_path, warning))
     }
 }
 

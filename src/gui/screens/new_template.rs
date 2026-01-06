@@ -2,7 +2,7 @@ use imgui::{ItemHoveredFlags, Ui};
 use crate::gui::state::CreateTemplateData;
 use crate::gui::ui::ScreenState;
 use crate::managers::template::Template;
-use crate::utils::dialogs::{error_dialog, info_dialog};
+use crate::utils::dialogs::{error_dialog, info_dialog, warn_dialog};
 use crate::utils::error_helper::open_error_to_io;
 use crate::utils::ui_helpers::create_imgui_window;
 
@@ -28,15 +28,25 @@ pub fn new_template_screen(ui: &mut Ui, screen_state: &mut ScreenState, create_t
 
             let disabled = ui.begin_disabled(is_insufficient);
             if ui.button("Create") {
-                let result = Template::create_custom_template(create_template_data, existing_templates);
-                if result.is_err() {
-                    error_dialog("Template Error", "Failed to create template", &result.unwrap_err());
-                } else {
-                    info_dialog("Template Success", "Template created successfully!\nAdd files and folders to the Template and they'll be copied to new projects.");
-                    let template_path = result.unwrap();
-                    let result = opener::open(template_path);
-                    if let Err(e) = result {
-                        error_dialog("Template Error", "Failed to open Template directory", &open_error_to_io(&e));
+                match Template::create_custom_template(create_template_data, existing_templates) {
+                    Ok((path, warning)) => {
+                        if let Some(warning_msg) = warning {
+                            warn_dialog("Template Warning", warning_msg.as_str());
+                        }
+
+                        info_dialog("Template Success", "Template created successfully!\nAdd files and folders to the Template and they'll be copied to new projects.");
+
+                        let result = opener::open(&path);
+                        if let Err(e) = result {
+                            error_dialog(
+                                "Template Error",
+                                format!("Failed to open Template path.\nTemplate can be found here:\n{}", &path.to_str().unwrap_or_default()).as_str(),
+                                &open_error_to_io(&e)
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        error_dialog("Template Error", "Error while creating template.", &e);
                     }
                 }
 

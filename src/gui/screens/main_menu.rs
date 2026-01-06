@@ -1,4 +1,4 @@
-use imgui::{StyleVar, Ui};
+use imgui::Ui;
 use crate::gui::ui::{ScreenState};
 use crate::gui::fonts::Fonts;
 use crate::managers::data::get_app_data;
