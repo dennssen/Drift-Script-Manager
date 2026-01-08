@@ -63,6 +63,20 @@ impl ScreenData {
     }
 }
 
+pub struct EditTemplateData {
+    pub template_name: String,
+    pub selected_template: String,
+}
+
+impl Default for EditTemplateData {
+    fn default() -> Self {
+        Self {
+            template_name: String::default(),
+            selected_template: String::default(),
+        }
+    }
+}
+
 pub struct CreateTemplateData {
     pub template_name: String,
     pub create_main: bool,

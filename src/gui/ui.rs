@@ -6,13 +6,14 @@ use crate::gui::screens::build_project::build_project_screen;
 use crate::gui::screens::create_project::create_project_screen;
 use crate::gui::screens::custom_templates::custom_templates_window;
 use crate::gui::screens::main_menu::main_menu_screen;
+use crate::gui::screens::new_template::new_template_screen;
+use crate::gui::screens::edit_templates::edit_templates_screen;
 use crate::utils;
 use utils::ui_helpers::{create_imgui_window};
 use utils::dialogs::{error_dialog, warn_dialog};
 use imgui::sys::{igGetMainViewport, igSetNextWindowPos, igSetNextWindowSize, ImGuiCond, ImGuiViewport, ImVec2};
 use imgui::Ui;
-use crate::gui::screens::new_template::new_template_screen;
-use crate::gui::state::CreateTemplateData;
+use crate::gui::state::{CreateTemplateData, EditTemplateData};
 use crate::managers::template::Template;
 
 pub enum ScreenState {
@@ -35,6 +36,7 @@ pub struct GuiInfo {
     projects: ProjectsData,
     custom_templates: Vec<Template>,
     create_template_data: CreateTemplateData,
+    edit_template_data: EditTemplateData,
 }
 
 impl GuiInfo {
@@ -45,6 +47,7 @@ impl GuiInfo {
             projects: ProjectsData::new(),
             custom_templates: vec![],
             create_template_data: CreateTemplateData::default(),
+            edit_template_data: EditTemplateData::default(),
         }
     }
 }
@@ -175,7 +178,7 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
             new_template_screen(ui, &mut gui_info.screen_state, &mut gui_info.create_template_data, &gui_info.custom_templates);
         }
         ScreenState::EditTemplates => {
-            
+            edit_templates_screen(ui, &mut gui_info.screen_state, &mut gui_info.edit_template_data, &gui_info.custom_templates);
         }
     }
 

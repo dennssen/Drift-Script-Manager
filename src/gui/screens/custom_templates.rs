@@ -42,7 +42,19 @@ pub fn custom_templates_window(ui: &mut Ui, screen_state: &mut ScreenState, exis
                 ui.new_line();
                 ui.same_line_with_pos(text_center_spacing(edit_text));
                 if ui.button(edit_text) {
-                    // TODO: Edit templates screen
+                    let result = get_custom_templates();
+                    if let Err(e) = result {
+                        error_dialog("Get Templates Failure", "Failed to get custom templates", &e);
+                    } else {
+                        *existing_templates = result
+                            .unwrap()
+                            .into_iter()
+                            .map(|name| Template::Custom(name))
+                            .collect();
+                        *screen_state = ScreenState::NewTemplate;
+                    }
+
+                    *screen_state = ScreenState::EditTemplates;
                 }
                 ui.new_line();
                 ui.same_line_with_pos(text_center_spacing(back_text));
