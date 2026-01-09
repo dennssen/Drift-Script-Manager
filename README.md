@@ -1,5 +1,5 @@
 # Drift Script Manager
-**Drift Script Manager** is an all-in-one Orion Drift Spectator Script Manager. Powered by Dear ImGui and Rust the **Drift Script Manager** aims to standardize the way both users and developers interact with spectator script by providing an intuitive GUI for all your spectator script needs.
+**Drift Script Manager** is an all-in-one Orion Drift Spectator Script Manager. Powered by Dear ImGui and Rust the **Drift Script Manager** aims to standardize the way both users and developers interact with spectator scripts by providing a standard packaging implementation and an intuitive GUI for all your scripting needs.
 
 ## Features
 - Intuitive UI for creating/editing/building scripts
