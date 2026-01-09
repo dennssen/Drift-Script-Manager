@@ -21,11 +21,15 @@ pub fn new_template_screen(ui: &mut Ui, screen_state: &mut ScreenState, create_t
             ui.checkbox("Create Main.luau", &mut create_template_data.create_main);
 
             ui.new_line();
+            
+            if ui.button("Back") {
+                *screen_state = ScreenState::CustomTemplates;
+            }
+            ui.same_line();
 
             let sufficient_result = create_template_data.sufficient_result.as_ref().unwrap();
 
             let is_insufficient: bool = sufficient_result.is_err();
-
             let disabled = ui.begin_disabled(is_insufficient);
             if ui.button("Create") {
                 match Template::create_custom_template(create_template_data, existing_templates) {
