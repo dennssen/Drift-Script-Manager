@@ -7,7 +7,7 @@ use crate::project::drift_project::{DriftProject};
 use crate::gui::ui::ScreenState;
 use crate::managers::data::get_app_data;
 use crate::managers::template::{get_custom_templates, Template};
-use crate::utils::dialogs::{error_dialog, warn_dialog};
+use crate::utils::dialogs::warn_dialog;
 
 static SEARCH_FILTER: Mutex<String> = Mutex::new(String::new());
 

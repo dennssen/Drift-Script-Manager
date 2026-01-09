@@ -1,5 +1,4 @@
 use std::io;
-use std::io::{Error, ErrorKind};
 use crate::project::drift_project::DriftProject;
 use crate::managers::template::{Template, EmbeddedTemplate};
 

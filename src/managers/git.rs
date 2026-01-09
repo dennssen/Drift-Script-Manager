@@ -2,7 +2,6 @@ use std::fs::File;
 use std::io;
 use std::io::{Error, ErrorKind, Write};
 use std::path::PathBuf;
-use std::process::Command;
 use std::sync::OnceLock;
 use git2::Repository;
 use which::which;
