@@ -36,5 +36,5 @@ tempfile = "3.23.0"
 winresource = "0.1.28"
 
 [dependencies.ashpd]
-version = "0.12"
+version = "0.11.0"
 features = ["backend"]
