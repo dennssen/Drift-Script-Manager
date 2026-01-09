@@ -59,22 +59,22 @@ impl Template {
             return Err(e)
         }
 
-        let templates_dir = get_custom_templates_dir();
+        let templates_dir = get_custom_templates_dir()?;
 
-        if !templates_dir.exists() {
-            create_dir_all(&templates_dir)?;
-        }
+        Self::create_custom_template_files(&templates_dir, &create_data.template_name, create_data.create_main)
+    }
 
-        let new_template_path = templates_dir.join(&create_data.template_name);
+    fn create_custom_template_files(template_location: &PathBuf, template_name: &String, create_main: bool) -> io::Result<(PathBuf, Option<String>)> {
+        let new_template_path = template_location.join(template_name);
         create_dir(&new_template_path)?;
 
         let mut warning = None;
-        if create_data.create_main {
+        if create_main {
             if let Err(e) = fs::write(new_template_path.join("main.luau"), "") {
                 warning = Some(format!("Failed to create main.luau.\nContinuing anyways.\nError: {}", e))
             }
         }
-        
+
         Ok((new_template_path, warning))
     }
 
@@ -83,13 +83,20 @@ impl Template {
             return Err(Error::new(ErrorKind::InvalidInput, "Cannot Edit an Embedded template"))
         }
 
-        let template_dir = get_custom_templates_dir();
-        let old_template_path = template_dir.join(self.name());
-        let new_template_path = template_dir.join(new_template_info.name());
+        let template_dir = get_custom_templates_dir()?;
 
-        fs::rename(old_template_path, new_template_path)?;
+        Self::edit_custom_template_files(&template_dir, self.name(), new_template_info.name())?;
 
         get_custom_templates()
+    }
+
+    fn edit_custom_template_files(template_location: &PathBuf, old_template_name: String, new_template_name: String) -> io::Result<PathBuf> {
+        let old_template_path = template_location.join(old_template_name);
+        let new_template_path = template_location.join(new_template_name);
+
+        fs::rename(&old_template_path, &new_template_path)?;
+
+        Ok(new_template_path)
     }
 
     pub fn delete_custom_template(&self) -> io::Result<Vec<Template>> {
@@ -97,12 +104,19 @@ impl Template {
             return Err(Error::new(ErrorKind::InvalidInput, "Cannot Delete an Embedded template"))
         }
 
-        let template_dir = get_custom_templates_dir();
-        let template_path = template_dir.join(self.name());
+        let template_dir = get_custom_templates_dir()?;
+
+        Self::delete_custom_template_files(&template_dir, self.name())?;
+
+        get_custom_templates()
+    }
+
+    fn delete_custom_template_files(template_location: &PathBuf, template_name: String) -> io::Result<()> {
+        let template_path = template_location.join(template_name);
 
         fs::remove_dir_all(template_path)?;
 
-        get_custom_templates()
+        Ok(())
     }
 }
 
@@ -127,17 +141,17 @@ impl EmbeddedTemplate {
 
 const TEMPLATES_DIR: include_dir::Dir = include_dir!("$CARGO_MANIFEST_DIR/assets/templates");
 
-pub fn get_custom_templates_dir() -> PathBuf {
-    dirs::document_dir().unwrap().join("DriftScriptManager").join("templates")
+pub fn get_custom_templates_dir() -> io::Result<PathBuf> {
+    let path = dirs::document_dir().unwrap().join("DriftScriptManager").join("templates");
+    if !path.exists() {
+        create_dir_all(&path)?;
+    }
+
+    Ok(path)
 }
 
 pub fn get_custom_templates() -> io::Result<Vec<Template>> {
-    let templates_dir = get_custom_templates_dir();
-
-    if !templates_dir.exists() {
-        create_dir_all(&templates_dir)?;
-        return Ok(Vec::new());
-    }
+    let templates_dir = get_custom_templates_dir()?;
 
     let mut templates = Vec::new();
 
@@ -165,7 +179,7 @@ pub fn copy_template(template: &Template, script_path: &Path) -> io::Result<()> 
     }
 }
 
-pub fn copy_embedded_template(template: &EmbeddedTemplate, script_path: &Path) -> std::io::Result<()> {
+pub fn copy_embedded_template(template: &EmbeddedTemplate, script_path: &Path) -> io::Result<()> {
     let template_dir = TEMPLATES_DIR
         .get_dir(template.name())
         .ok_or_else(|| Error::new(ErrorKind::NotFound, "Template not found"))?;
@@ -176,7 +190,7 @@ pub fn copy_embedded_template(template: &EmbeddedTemplate, script_path: &Path) -
 }
 
 
-fn copy_embedded_dir_recursive(dir: &include_dir::Dir, dst: &Path) -> std::io::Result<()> {
+fn copy_embedded_dir_recursive(dir: &include_dir::Dir, dst: &Path) -> io::Result<()> {
     for file in dir.files() {
         let file_path = dst.join(file.path().file_name().unwrap());
 
@@ -196,7 +210,7 @@ fn copy_embedded_dir_recursive(dir: &include_dir::Dir, dst: &Path) -> std::io::R
 }
 
 fn copy_custom_template(template_name: &str, script_path: &Path) -> io::Result<()> {
-    let template_dir = get_custom_templates_dir().join(template_name);
+    let template_dir = get_custom_templates_dir()?.join(template_name);
 
     if template_name.is_empty() || !template_dir.exists() {
         return Err(Error::new(ErrorKind::NotFound, "Custom template not found"));
@@ -259,5 +273,69 @@ mod tests {
 
         assert!(copy_dir_recursive(&src_path, &dst_path).is_ok());
         assert!(!is_directory_empty(dst_path).unwrap());
+    }
+
+    #[test]
+    fn test_is_not_unique() {
+        let template_name: String = String::from("not unique");
+        let existing_templates: Vec<Template> = vec![Template::Custom("not unique".to_string())];
+
+        assert!(Template::is_unique(&template_name, &existing_templates).is_err())
+    }
+
+    #[test]
+    fn test_has_invalid_name_empty() {
+        assert!(Template::has_valid_name(&String::new()).is_err())
+    }
+
+    #[test]
+    fn test_has_invalid_name_whitespace() {
+        assert!(Template::has_valid_name(&String::from(" ")).is_err())
+    }
+
+    #[test]
+    fn test_has_valid_name() {
+        assert!(Template::has_valid_name(&String::from("Valid")).is_ok())
+    }
+
+    #[test]
+    fn test_create_custom_template_files() {
+        let temp = tempdir().unwrap();
+        let template_name = "template";
+        let create_main = true;
+
+        let result = Template::create_custom_template_files(&temp.path().to_path_buf(), &template_name.to_string(), create_main);
+
+        assert!(result.is_ok());
+        let (path, _) = result.unwrap();
+        assert!(path.exists());
+        assert!(path.join("main.luau").exists());
+    }
+
+    #[test]
+    fn test_edit_custom_template_files() {
+        let temp = tempdir().unwrap();
+
+        let old_name = "old".to_string();
+        let new_name = "new".to_string();
+
+        Template::create_custom_template_files(&temp.path().to_path_buf(), &old_name, false).unwrap();
+
+        let result = Template::edit_custom_template_files(&temp.path().to_path_buf(), old_name, new_name.clone());
+        assert!(result.is_ok());
+        let new_path = result.unwrap();
+
+        assert_eq!(new_path.file_name().unwrap().to_str().unwrap(), new_name.as_str())
+    }
+
+    #[test]
+    fn test_delete_custom_template_files() {
+        let temp = tempdir().unwrap();
+
+        let name = "template".to_string();
+
+        Template::create_custom_template_files(&temp.path().to_path_buf(), &name, false).unwrap();
+
+        assert!(Template::delete_custom_template_files(&temp.path().to_path_buf(), name).is_ok())
     }
 }

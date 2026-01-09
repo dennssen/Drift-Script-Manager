@@ -17,14 +17,20 @@ pub fn edit_templates_screen(ui: &mut Ui, screen_state: &mut ScreenState, edit_t
     create_imgui_window(ui, "Edit Templates")
         .build(|| {
             if ui.button(format!("{} Open Templates Directory", icons::FOLDER)) {
-                let dir = get_custom_templates_dir();
-                let result = opener::open(&dir);
-                if let Err(e) = result {
-                    error_dialog(
-                        "Open Error",
-                        &format!("Failed to open templates directory.\nDirectory can be found here:\n{}", dir.to_str().unwrap_or_default()),
-                        &open_error_to_io(&e)
-                    )
+                match get_custom_templates_dir() {
+                    Err(e) => {
+                        error_dialog("Templates Directory Error", "Failed to get Templates Directory", &e);
+                    }
+                    Ok(path) => {
+                        let result = opener::open(&path);
+                        if let Err(e) = result {
+                            error_dialog(
+                                "Open Error",
+                                &format!("Failed to open templates directory.\nDirectory can be found here:\n{}", path.to_str().unwrap_or_default()),
+                                &open_error_to_io(&e)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -58,14 +64,21 @@ pub fn edit_templates_screen(ui: &mut Ui, screen_state: &mut ScreenState, edit_t
 
                 ui.indent();
                 if ui.button(format!("{} Open Directory", icons::FOLDER)) {
-                    let dir = get_custom_templates_dir().join(&selected_template.name());
-                    let result = opener::open(&dir);
-                    if let Err(e) = result {
-                        error_dialog(
-                            "Open Error",
-                            &format!("Failed to open templates directory.\nDirectory can be found here:\n{}", dir.to_str().unwrap_or_default()),
-                            &open_error_to_io(&e)
-                        )
+                    match get_custom_templates_dir() {
+                        Err(e) => {
+                            error_dialog("Templates Directory Error", "Failed to get Templates Directory", &e);
+                        }
+                        Ok(path) => {
+                            let dir = path.join(&selected_template.name());
+                            let result = opener::open(&dir);
+                            if let Err(e) = result {
+                                error_dialog(
+                                    "Open Error",
+                                    &format!("Failed to open templates directory.\nDirectory can be found here:\n{}", dir.to_str().unwrap_or_default()),
+                                    &open_error_to_io(&e)
+                                )
+                            }
+                        }
                     }
                 }
                 ui.new_line();
