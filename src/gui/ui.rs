@@ -178,7 +178,7 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
             new_template_screen(ui, &mut gui_info.screen_state, &mut gui_info.create_template_data, &gui_info.custom_templates);
         }
         ScreenState::EditTemplates => {
-            edit_templates_screen(ui, &mut gui_info.screen_state, &mut gui_info.edit_template_data, &gui_info.custom_templates);
+            edit_templates_screen(ui, &mut gui_info.screen_state, &mut gui_info.edit_template_data, &mut gui_info.custom_templates);
         }
     }
 

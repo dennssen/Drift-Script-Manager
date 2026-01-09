@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use include_dir::include_dir;
 use crate::gui::state::CreateTemplateData;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord)]
 pub enum Template {
     Embedded(EmbeddedTemplate),
     Custom(String)
@@ -18,9 +18,44 @@ impl Template {
             Self::Custom(name) => name.clone()
         }
     }
+
+    pub fn has_sufficient_info(template_name: &String, existing_templates: &Vec<Template>) -> io::Result<()> {
+        if let Err(e) = Self::has_valid_name(template_name) {
+            return Err(e)
+        }
+
+        if let Err(e) = Self::is_unique(template_name, existing_templates) {
+            return Err(e)
+        }
+
+        Ok(())
+    }
+
+    fn is_unique(template_name: &String, existing_templates: &Vec<Template>) -> io::Result<()> {
+        for template in existing_templates {
+            let name = template.name();
+            if name == *template_name {
+                return Err(Error::new(ErrorKind::AlreadyExists, "A template with this name already exists"));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn has_valid_name(template_name: &String) -> io::Result<()> {
+        if template_name.is_empty() {
+            return Err(Error::new(ErrorKind::InvalidData, "Template name cannot be empty"));
+        }
+
+        if template_name.replace(" ", "").is_empty() {
+            return Err(Error::new(ErrorKind::InvalidData, "Template name cannot consist of whitespace only"));
+        }
+
+        Ok(())
+    }
     
     pub fn create_custom_template(create_data: &CreateTemplateData, existing_templates: &Vec<Template>) -> io::Result<(PathBuf, Option<String>)> {
-        if let Err(e) = create_data.has_sufficient_info(existing_templates) {
+        if let Err(e) = Self::has_sufficient_info(&create_data.template_name, existing_templates) {
             return Err(e)
         }
 
@@ -42,9 +77,36 @@ impl Template {
         
         Ok((new_template_path, warning))
     }
+
+    pub fn edit_custom_template(&self, new_template_info: Template) -> io::Result<Vec<Template>> {
+        if let Template::Embedded(_) = self {
+            return Err(Error::new(ErrorKind::InvalidInput, "Cannot Edit an Embedded template"))
+        }
+
+        let template_dir = get_custom_templates_dir();
+        let old_template_path = template_dir.join(self.name());
+        let new_template_path = template_dir.join(new_template_info.name());
+
+        fs::rename(old_template_path, new_template_path)?;
+
+        get_custom_templates()
+    }
+
+    pub fn delete_custom_template(&self) -> io::Result<Vec<Template>> {
+        if let Template::Embedded(_) = self {
+            return Err(Error::new(ErrorKind::InvalidInput, "Cannot Delete an Embedded template"))
+        }
+
+        let template_dir = get_custom_templates_dir();
+        let template_path = template_dir.join(self.name());
+
+        fs::remove_dir_all(template_path)?;
+
+        get_custom_templates()
+    }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum EmbeddedTemplate {
     Empty,
     Default,
@@ -69,7 +131,7 @@ pub fn get_custom_templates_dir() -> PathBuf {
     dirs::document_dir().unwrap().join("DriftScriptManager").join("templates")
 }
 
-pub fn get_custom_templates() -> io::Result<Vec<String>> {
+pub fn get_custom_templates() -> io::Result<Vec<Template>> {
     let templates_dir = get_custom_templates_dir();
 
     if !templates_dir.exists() {
@@ -86,7 +148,7 @@ pub fn get_custom_templates() -> io::Result<Vec<String>> {
         if path.is_dir() {
             if let Some(name) = path.file_name() {
                 if let Some(name_str) = name.to_str() {
-                    templates.push(name_str.to_string());
+                    templates.push(Template::Custom(name_str.to_string()));
                 }
             }
         }
@@ -118,7 +180,7 @@ fn copy_embedded_dir_recursive(dir: &include_dir::Dir, dst: &Path) -> std::io::R
     for file in dir.files() {
         let file_path = dst.join(file.path().file_name().unwrap());
 
-        std::fs::write(&file_path, file.contents())?;
+        fs::write(&file_path, file.contents())?;
     }
 
 
@@ -156,7 +218,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> io::Result<()> {
             create_dir_all(&dst_path)?;
             copy_dir_recursive(&path, &dst_path)?;
         } else {
-            std::fs::copy(&path, &dst_path)?;
+            fs::copy(&path, &dst_path)?;
         }
     }
 

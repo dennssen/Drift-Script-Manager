@@ -140,29 +140,8 @@ pub fn separator_text<S: Clone>(ui: &Ui, text: S)
 where
     S: AsRef<str>, Vec<u8>: From<S>
 {
-    let text_pos: f32 = 0.2;
-
-    let text_cstring = CString::new(text).expect("Label must not contain null bytes");
-    let mut size = ImVec2::zero();
-
-    unsafe {
-        igCalcTextSize(&mut size, text_cstring.as_ptr(), null(), true, -1.0);
-    }
-
-    let text_width = size.x;
-    let full_separator_width = ui.content_region_avail()[0] - text_width;
-
-    if full_separator_width > 0.0 {
-        ui.separator();
-        ui.same_line_with_pos(ui.cursor_pos()[0] + (full_separator_width * text_pos));
-
-        ui.text(text_cstring.to_str().unwrap_or_default());
-        ui.same_line_with_pos(ui.cursor_pos()[0] + (full_separator_width * (1.0 - text_pos)));
-
-        ui.separator();
-    } else {
-        ui.text(text_cstring.to_str().unwrap_or_default());
-    }
+    ui.text(text);
+    ui.separator();
 }
 
 pub fn main_menu_style<F>(ui: &Ui, f: F)

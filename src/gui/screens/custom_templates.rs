@@ -26,35 +26,12 @@ pub fn custom_templates_window(ui: &mut Ui, screen_state: &mut ScreenState, exis
                 let push = ui.push_font(fonts.big_font);
                 ui.same_line_with_pos(text_center_spacing(new_text));
                 if ui.button(new_text) {
-                    let result = get_custom_templates();
-                    if let Err(e) = result {
-                        error_dialog("Get Templates Failure", "Failed to get custom templates", &e);
-                    } else {
-                        *existing_templates = result
-                            .unwrap()
-                            .into_iter()
-                            .map(|name| Template::Custom(name))
-                            .collect();
-                        *screen_state = ScreenState::NewTemplate;
-                    }
-                    
+                    cache_custom_templates(existing_templates, screen_state, ScreenState::NewTemplate);
                 }
                 ui.new_line();
                 ui.same_line_with_pos(text_center_spacing(edit_text));
                 if ui.button(edit_text) {
-                    let result = get_custom_templates();
-                    if let Err(e) = result {
-                        error_dialog("Get Templates Failure", "Failed to get custom templates", &e);
-                    } else {
-                        *existing_templates = result
-                            .unwrap()
-                            .into_iter()
-                            .map(|name| Template::Custom(name))
-                            .collect();
-                        *screen_state = ScreenState::NewTemplate;
-                    }
-
-                    *screen_state = ScreenState::EditTemplates;
+                    cache_custom_templates(existing_templates, screen_state, ScreenState::EditTemplates);
                 }
                 ui.new_line();
                 ui.same_line_with_pos(text_center_spacing(back_text));
@@ -64,4 +41,18 @@ pub fn custom_templates_window(ui: &mut Ui, screen_state: &mut ScreenState, exis
                 push.end();
             });
         });
+}
+
+fn cache_custom_templates(existing_templates: &mut Vec<Template>, screen_state: &mut ScreenState, next_screen: ScreenState) {
+    let result = get_custom_templates();
+
+    match result {
+        Err(e) => {
+            error_dialog("Get Templates Failure", "Failed to get custom templates", &e);
+        }
+        Ok(templates) => {
+            *existing_templates = templates;
+            *screen_state = next_screen;
+        }
+    }
 }

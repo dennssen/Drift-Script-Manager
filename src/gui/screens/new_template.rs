@@ -15,7 +15,7 @@ pub fn new_template_screen(ui: &mut Ui, screen_state: &mut ScreenState, create_t
             let input_edited = ui.input_text("Template Name", &mut create_template_data.template_name).build();
 
             if input_edited || create_template_data.sufficient_result.is_none() {
-                create_template_data.sufficient_result = Some(create_template_data.has_sufficient_info(existing_templates));
+                create_template_data.sufficient_result = Some(Template::has_sufficient_info(&create_template_data.template_name, existing_templates));
             }
 
             ui.checkbox("Create Main.luau", &mut create_template_data.create_main);

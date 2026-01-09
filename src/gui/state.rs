@@ -65,14 +65,16 @@ impl ScreenData {
 
 pub struct EditTemplateData {
     pub template_name: String,
-    pub selected_template: String,
+    pub selected_template: Option<Template>,
+    pub sufficient_result: Option<io::Result<()>>,
 }
 
 impl Default for EditTemplateData {
     fn default() -> Self {
         Self {
             template_name: String::default(),
-            selected_template: String::default(),
+            selected_template: None,
+            sufficient_result: None,
         }
     }
 }
@@ -81,45 +83,6 @@ pub struct CreateTemplateData {
     pub template_name: String,
     pub create_main: bool,
     pub sufficient_result: Option<io::Result<()>>,
-}
-
-impl CreateTemplateData {
-    pub fn has_sufficient_info(&self, existing_templates: &Vec<Template>) -> io::Result<()> {
-        if let Err(e) = self.has_valid_name() {
-            return Err(e)
-        }
-        
-        if let Err(e) = self.is_unique(existing_templates) {
-            return Err(e)
-        }
-        
-        Ok(())
-    }
-    
-    fn is_unique(&self, existing_templates: &Vec<Template>) -> io::Result<()> {
-        for template in existing_templates {
-            let name = template.name();
-            if name == self.template_name {
-                return Err(Error::new(ErrorKind::AlreadyExists, "A template with this name already exists"));
-            }
-        }
-        
-        Ok(())
-    }
-    
-    fn has_valid_name(&self) -> io::Result<()> {
-        let name = &self.template_name;
-        
-        if name.is_empty() {
-            return Err(Error::new(ErrorKind::InvalidData, "Template name cannot be empty"));
-        }
-        
-        if name.replace(" ", "").is_empty() {
-            return Err(Error::new(ErrorKind::InvalidData, "Template name cannot consist of whitespace only"));
-        }
-        
-        Ok(())
-    }
 }
 
 impl Default for CreateTemplateData {
