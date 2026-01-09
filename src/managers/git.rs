@@ -4,6 +4,7 @@ use std::io::{Error, ErrorKind, Write};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
+use git2::Repository;
 use which::which;
 
 static HAS_GIT: OnceLock<bool> = OnceLock::new();
@@ -15,46 +16,37 @@ pub fn has_git() -> bool {
 }
 
 pub fn create_local_repo(project_path: &PathBuf) -> io::Result<()> {
-    let output = Command::new("git")
-        .arg("init")
-        .current_dir(&project_path)
-        .output()?;
+    let repo = Repository::init(project_path)
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
-    if !output.status.success() {
-        return Err(Error::new(
-            ErrorKind::Other,
-            format!("Failed to initialize git repo: {}", String::from_utf8_lossy(&output.stderr))
-        ))
-    }
+    create_git_ignore(project_path)?;
 
-    create_git_ignore(&project_path)?;
+    let mut index = repo.index()
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
-    let output = Command::new("git")
-        .arg("add")
-        .arg(".")
-        .current_dir(&project_path)
-        .output()?;
+    index.add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None)
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
-    if !output.status.success() {
-        return Err(Error::new(
-            ErrorKind::Other,
-            format!("Failed to add files {}", String::from_utf8_lossy(&output.stderr))
-        ))
-    }
+    index.write()
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
-    let output = Command::new("git")
-        .arg("commit")
-        .arg("-m")
-        .arg("Initial project setup")
-        .current_dir(&project_path)
-        .output()?;
+    let tree_id = index.write_tree()
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
-    if !output.status.success() {
-        return Err(Error::new(
-            ErrorKind::Other,
-            format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr))
-        ))
-    }
+    let tree = repo.find_tree(tree_id)
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+
+    let sig = repo.signature()
+        .map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
+
+    repo.commit(
+        Some("HEAD"),
+        &sig,
+        &sig,
+        "Initial project setup",
+        &tree,
+        &[]
+    ).map_err(|e| Error::new(ErrorKind::Other, e.to_string()))?;
 
     Ok(())
 }
