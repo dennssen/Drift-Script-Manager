@@ -43,3 +43,4 @@ git clone https://github.com/dennssen/Drift-Script-Manager.git
 cd Drift-Script-Manager
 cargo build --release
 ```
+*Note: Master branch may contain unreleased code and features, it is advised to install a stable release from the release page*
