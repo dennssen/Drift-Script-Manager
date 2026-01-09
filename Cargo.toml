@@ -34,8 +34,3 @@ tempfile = "3.23.0"
 
 [build-dependencies]
 winresource = "0.1.28"
-
-[dependencies.ashpd]
-version = "0.11.0"
-default-features = false
-features = ["backend", "tokio", "wayland"]
