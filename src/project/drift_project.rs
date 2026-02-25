@@ -321,19 +321,25 @@ impl DriftProject {
 
         Ok(())
     }
+    
+    pub fn revert_build(zip_file_path: &PathBuf) -> io::Result<()> {
+        fs::remove_file(zip_file_path)?;
+        Ok(())
+    }
 
-    pub fn build(&self, build_data: &BuildProjectData) {
+    pub fn build(&self, build_data: &BuildProjectData) -> Result<(), PathBuf> {
         let mut zip_file_name = self.package_info.script_name.clone();
 
         if build_data.version_tag {
             zip_file_name = zip_file_name + " - " + self.package_info.version.as_str();
         }
 
-        let zip_file = File::create(&self.build_path.join(zip_file_name + ".zip"));
+        let zip_file_path: &PathBuf = &self.build_path.join(zip_file_name + ".zip");
+        let zip_file = File::create(zip_file_path);
 
         if let Err(e) = zip_file {
             error_dialog("Build Failure", "Failed to create zip file", &e);
-            return;
+            return Err(zip_file_path.clone());
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
@@ -342,16 +348,18 @@ impl DriftProject {
         if let Err(e) = zip_result {
             let e = zip_error_to_io(&e);
             error_dialog("Archive Failure", "Failed to archive script directory", &e);
-            return;
+            return Err(zip_file_path.clone());
         }
 
         if build_data.open_directory {
             let open_result = opener::open(&self.build_path);
             if let Err(_) = open_result {
                 warn_dialog("Opening Failure", "Build succeeded but could not open the build directory.\nOpen the directory manually to see the finished build.");
-                return;
+                return Err(zip_file_path.clone());
             }
         }
+        
+        Ok(())
     }
 
     pub fn reset_project_data(&mut self) {
