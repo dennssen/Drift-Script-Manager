@@ -6,11 +6,12 @@ use regex::Regex;
 use zip::ZipWriter;
 use zip_extensions::ZipWriterExtensions;
 use lazy_static::lazy_static;
+use rfd::MessageDialogResult;
 use crate::managers::git::create_local_repo;
 use crate::gui::state::{BuildProjectData, CreateProjectData};
 use crate::managers::template::copy_template;
 use crate::project::package_info::PackageInfo;
-use crate::utils::dialogs::{error_dialog, warn_dialog};
+use crate::utils::dialogs::{error_dialog, option_dialog, warn_dialog};
 use crate::utils::error_helper::{json_error_to_io, open_error_to_io, zip_error_to_io};
 
 #[derive(Debug)]
@@ -107,6 +108,7 @@ pub struct DriftProject {
 lazy_static! {
     static ref WILDCARD_VERSION_PATTERN: Regex =Regex::new(r#"^(?P<start>\s*local\s+[^:=]+\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap();
     static ref VERSION_PATTERN: Regex = Regex::new(r#"^(?P<start>\s*local\s+_?version\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap();
+    static ref DEV_NOTE_PATTERN: Regex = Regex::new(r#"^--\s*\[Dev\]\s*(?P<note>.*)$"#).unwrap();
 }
 
 impl DriftProject {
@@ -321,10 +323,49 @@ impl DriftProject {
 
         Ok(())
     }
-    
+
     pub fn revert_build(zip_file_path: &PathBuf) -> io::Result<()> {
         fs::remove_file(zip_file_path)?;
         Ok(())
+    }
+
+    fn find_notes_in_file(file_path: &PathBuf) -> io::Result<bool> {
+        let file =  match File::open(file_path) {
+            Ok(file) => file,
+            Err(e) => return Err(e),
+        };
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line?;
+            if let Some(caps) = DEV_NOTE_PATTERN.captures(line.trim()) {
+                let note: &str = caps.name("note").unwrap().as_str();
+                let dialog_description: String = format!("You left this note in your code:\n{}\nDo you want to continue?", note);
+                if let MessageDialogResult::No = option_dialog("Dev Note", dialog_description.as_str()) {
+                    return Ok(false)
+                }
+            }
+        }
+
+        Ok(true)
+    }
+
+    fn search_notes_recursive(dir_path: &PathBuf) -> io::Result<bool> {
+        for entry_result in fs::read_dir(dir_path)? {
+            let entry = entry_result?;
+            let path = entry.path();
+
+            if path.is_dir() {
+                Self::search_notes_recursive(&path)?;
+            } else if path.is_file() {
+                let should_continue = Self::find_notes_in_file(&path)?;
+                if !should_continue {
+                    return Ok(false)
+                }
+            }
+        }
+
+        Ok(true)
     }
 
     pub fn build(&self, build_data: &BuildProjectData) -> Result<(), PathBuf> {
@@ -340,6 +381,22 @@ impl DriftProject {
         if let Err(e) = zip_file {
             error_dialog("Build Failure", "Failed to create zip file", &e);
             return Err(zip_file_path.clone());
+        }
+
+        match Self::search_notes_recursive(&self.script_path) {
+            Ok(should_continue) => {
+                if !should_continue {
+                    return Err(zip_file_path.clone());
+                }
+            }
+            Err(_) => {
+                if let MessageDialogResult::No = option_dialog(
+                    "Dev Notes Failure",
+                    "Failed to search for some/all dev notes.\nDo you wish to continue?"
+                ) {
+                    return Err(zip_file_path.clone());
+                }
+            }
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
@@ -358,7 +415,7 @@ impl DriftProject {
                 return Err(zip_file_path.clone());
             }
         }
-        
+
         Ok(())
     }
 
