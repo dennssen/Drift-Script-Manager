@@ -1,7 +1,8 @@
 use std::{fs, io};
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
+use std::io::{BufRead, BufReader, BufWriter, Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
+use fs_extra::dir::CopyOptions;
 use regex::Regex;
 use zip::ZipWriter;
 use zip_extensions::ZipWriterExtensions;
@@ -109,6 +110,8 @@ lazy_static! {
     static ref WILDCARD_VERSION_PATTERN: Regex =Regex::new(r#"^(?P<start>\s*local\s+[^:=]+\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap();
     static ref VERSION_PATTERN: Regex = Regex::new(r#"^(?P<start>\s*local\s+_?version\s*(?::\s*string\s*)?=\s*["'`])(?P<version>[^"'`]*)(?P<end>["'`]\s*)$"#).unwrap();
     static ref DEV_NOTE_PATTERN: Regex = Regex::new(r#"^--\s*\[Dev\]\s*(?P<note>.*)$"#).unwrap();
+    static ref DEV_BLOCK_BEGIN_PATTERN: Regex = Regex::new(r#"^--\s*\[Begin Dev Block\]$"#).unwrap();
+    static ref DEV_BLOCK_END_PATTERN: Regex = Regex::new(r#"^--\s*\[End Dev Block\]$"#).unwrap();
 }
 
 impl DriftProject {
@@ -368,6 +371,108 @@ impl DriftProject {
         Ok(true)
     }
 
+    fn compile_file(original_path: &PathBuf) -> io::Result<()> {
+        let original_file_name = original_path.file_name().unwrap().to_str().unwrap();
+        let temp_file_path = &original_path.parent().unwrap().join(format!("temp_{}", original_file_name));
+        let original_file = File::open(original_path)?;
+
+        let mut temp_file = File::create(temp_file_path)?;
+
+        let reader = BufReader::new(original_file);
+        let mut current_dev_block_start: usize = 0;
+        let mut is_in_dev_block: bool = false;
+        for (i, line) in reader.lines().enumerate() {
+            let line = if let Ok(line) = line {
+                line
+            } else {
+                return match fs::remove_file(temp_file_path) {
+                    Ok(_) => {
+                        Err(Error::new(ErrorKind::Other, "Failed to read line"))
+                    }
+                    Err(_) => {
+                        Err(Error::new(ErrorKind::Other, "Failed to read line. Unable to remove temp file"))
+                    }
+                }
+            };
+
+            if !is_in_dev_block {
+                if DEV_BLOCK_BEGIN_PATTERN.is_match(&line.trim()) {
+                    is_in_dev_block = true;
+                    current_dev_block_start = i+1;
+                    continue
+                }
+            } else {
+                if DEV_BLOCK_END_PATTERN.is_match(&line.trim()) {
+                    is_in_dev_block = false;
+                    current_dev_block_start = 0;
+                }
+                continue
+            }
+
+            if let Err(_) = writeln!(temp_file, "{}", line) {
+                return match fs::remove_file(temp_file_path) {
+                    Ok(_) => {
+                        Err(Error::new(ErrorKind::Other, "Failed to write line"))
+                    }
+                    Err(_) => {
+                        Err(Error::new(ErrorKind::Other, "Failed to write line. Unable to remove temp file"))
+                    }
+                }
+            }
+        }
+
+        if is_in_dev_block {
+            // still in dev block after every line has been read means missing end block
+            return match fs::remove_file(temp_file_path) {
+                Ok(_) => {
+                    Err(Error::new(ErrorKind::Other, format!("Missing dev block end for dev block at line {} in {}", current_dev_block_start, original_file_name)))
+                }
+                Err(_) => {
+                    Err(Error::new(ErrorKind::Other, format!("Missing dev block end for dev block at line {} in {}. Unable to remove temp file", current_dev_block_start, original_file_name)))
+                }
+            }
+        }
+
+        if let Err(_) = fs::rename(&temp_file_path, &original_path) {
+            return match fs::remove_file(temp_file_path) {
+                Ok(_) => {
+                    Err(Error::new(ErrorKind::Other, "Failed to rename temp file"))
+                }
+                Err(_) => {
+                    Err(Error::new(ErrorKind::Other, "Failed to rename temp file. Unable to remove temp file"))
+                }
+            }
+        }
+
+        Ok(())
+    }
+    fn compile_script_dir_recursive(dir_path: &PathBuf) -> io::Result<()> {
+        for entry_result in fs::read_dir(dir_path)? {
+            let entry = entry_result?;
+            let path = entry.path();
+            if path.is_dir() {
+                Self::compile_script_dir_recursive(&path)?;
+            } else if path.is_file() {
+                Self::compile_file(&path)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn compile_script(script_dir: &PathBuf, build_dir: &PathBuf) -> io::Result<PathBuf> {
+        let copy_options = CopyOptions::new().overwrite(true);
+        if let Err(e) = fs_extra::dir::copy(script_dir, build_dir, &copy_options) {
+            return Err(Error::new(ErrorKind::Other, format!("{}", e)));
+        };
+
+        let compiled_script_path = build_dir.join(script_dir.file_name().unwrap());
+
+        Self::compile_script_dir_recursive(&compiled_script_path)?;
+
+        Ok(compiled_script_path)
+    }
+
     pub fn build(&self, build_data: &BuildProjectData) -> Result<(), PathBuf> {
         let mut zip_file_name = self.package_info.script_name.clone();
 
@@ -400,7 +505,17 @@ impl DriftProject {
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
-        let zip_result = zip.create_from_directory(&self.script_path);
+        let zip_archive_content = Self::compile_script(&self.script_path, &self.build_path);
+        if let Err(e) = zip_archive_content {
+            error_dialog("Compilation Failure", "Failed to compile script", &e);
+            return Err(zip_file_path.clone());
+        }
+        let zip_archive_content_dir = &zip_archive_content.unwrap();
+        let zip_result = zip.create_from_directory(zip_archive_content_dir);
+
+        if let Err(_) = fs::remove_dir_all(zip_archive_content_dir) {
+            warn_dialog("Cleanup Failure", "Failed to remove temp compiled version of the script.\nBuild will continue.")
+        }
 
         if let Err(e) = zip_result {
             let e = zip_error_to_io(&e);
