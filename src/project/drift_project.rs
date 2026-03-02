@@ -1,7 +1,7 @@
 use std::{fs, io};
 use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, BufWriter, Error, ErrorKind, Write};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use fs_extra::dir::CopyOptions;
 use regex::Regex;
