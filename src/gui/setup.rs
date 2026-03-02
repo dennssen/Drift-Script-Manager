@@ -44,6 +44,7 @@ pub fn create_window() -> (
         .with_inner_size(LogicalSize::new(INITIAL_WIDTH, INITIAL_HEIGHT))
         .with_resizable(false)
         .with_maximized(false)
+        .with_visible(false) // Taskbar icon fix
         .with_enabled_buttons(WindowButtons::all() & !WindowButtons::MAXIMIZE);
 
     #[cfg(target_os = "windows")]
@@ -99,6 +100,8 @@ pub fn create_window() -> (
     let context = context
         .make_current(&surface)
         .expect("Failed to make OpenGL context current");
+
+    window.set_visible(true); // Taskbar icon fix
 
     (event_loop, window, surface, context)
 }
