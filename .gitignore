@@ -29,3 +29,4 @@ Cargo.lock
 
 .idea/**/gradle.xml
 .idea/**/libraries
+/.idea
