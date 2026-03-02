@@ -1,4 +1,5 @@
 use std::{fs, io};
+use std::ffi::OsStr;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, BufWriter, Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
@@ -333,17 +334,18 @@ impl DriftProject {
     }
 
     fn find_notes_in_file(file_path: &PathBuf) -> io::Result<bool> {
+        let file_name: &OsStr = &file_path.file_name().unwrap();
         let file =  match File::open(file_path) {
             Ok(file) => file,
             Err(e) => return Err(e),
         };
         let reader = BufReader::new(file);
 
-        for line in reader.lines() {
+        for (line_number, line) in reader.lines().enumerate() {
             let line = line?;
             if let Some(caps) = DEV_NOTE_PATTERN.captures(line.trim()) {
                 let note: &str = caps.name("note").unwrap().as_str();
-                let dialog_description: String = format!("You left this note in your code:\n{}\nDo you want to continue?", note);
+                let dialog_description: String = format!("You left this note in {} at line {}:\n{}\nDo you want to continue?", file_name.display(), line_number, note);
                 if let MessageDialogResult::No = option_dialog("Dev Note", dialog_description.as_str()) {
                     return Ok(false)
                 }
