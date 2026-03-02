@@ -8,6 +8,7 @@
 - In app template navigator/editor
 - Fast and lightweight
 - Compatible with any of your previous multi-file projects
+- Dev Annotations
 
 ## Installation
 
@@ -36,6 +37,30 @@ Note: You may need to install X11/XCB dependencies on some minimal systems.
 
 ## Selecting a project (Editing/Building)
 When selecting a project for either editing or building the file dialog expects your projects `package.json`
+
+## How to use Dev Annotations
+Dev annotations are comments that you can use to let the project manager know what you want to remember or don't want in the release code.
+
+Here is an example of how to use Dev Notes:
+```lua
+function myCode()
+    -- [Dev] This is for testing only and should be removed before release
+    print("test")
+end
+```
+With this example, if you were to try and build, the project manager will tell you what the note says and where it is and then give you the option to cancel the build process.
+
+Here is an example of how to use Dev Blocks:
+```lua
+function myCode()
+    -- [Begin Dev Block]
+    print("test")
+    -- [End Dev Block]
+end
+```
+With this example, if you were to try and build, the project manager will remove all the code inside the Dev Blocks before placing the file in the build zip.
+
+You can have multiple Dev annotations in the same file, and in every file. I recommend creating a vscode snippet for the Dev annotations.
 
 ## Building from source
 ```bash

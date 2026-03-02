@@ -15,6 +15,7 @@ use imgui::sys::{igGetMainViewport, igSetNextWindowPos, igSetNextWindowSize, ImG
 use imgui::Ui;
 use crate::gui::state::{CreateTemplateData, EditTemplateData};
 use crate::managers::template::Template;
+use crate::project::drift_project::DriftProject;
 
 pub enum ScreenState {
     MainMenu,
@@ -167,7 +168,12 @@ pub fn render_ui(ui: &mut Ui, gui_info: &mut GuiInfo, fonts: &Fonts) {
                 return;
             });
 
-            gui_info.projects.build_project.as_ref().unwrap().build(&gui_info.screen_data.build_data);
+            if let Err(zip_path) = gui_info.projects.build_project.as_ref().unwrap().build(&gui_info.screen_data.build_data) {
+                if let Err(e) = DriftProject::revert_build(&zip_path) {
+                    error_dialog("Error", "Failed to revert build", &e);
+                }
+            }
+
             gui_info.screen_data.build_data = BuildProjectData::default();
             gui_info.screen_state = ScreenState::MainMenu;
         }
