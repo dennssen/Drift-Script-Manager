@@ -22,7 +22,7 @@ pub struct ProjectPaths {
     pub directory_name: String,
 
     pub package_path: PathBuf,
-    pub script_path: PathBuf,
+    pub project_path: PathBuf,
     pub build_path: PathBuf,
 }
 
@@ -33,7 +33,7 @@ impl ProjectPaths {
             directory_name: String::new(),
 
             package_path: PathBuf::new(),
-            script_path: PathBuf::new(),
+            project_path: PathBuf::new(),
             build_path: PathBuf::new(),
         }
     }
@@ -51,17 +51,17 @@ impl ProjectPaths {
             return Err(Error::new(ErrorKind::InvalidFilename, "file not called package.json"))
         }
 
-        paths.script_path = paths.package_path.parent().unwrap().to_path_buf();
-        if !paths.script_path.exists() {
+        paths.project_path = paths.package_path.parent().unwrap().to_path_buf();
+        if !paths.project_path.exists() {
             return Err(Error::new(ErrorKind::InvalidInput, "package.json is not in a script directory"))
         }
 
-        paths.directory_name = get_path_file_name(&paths.script_path).unwrap_or("").to_string();
+        paths.directory_name = get_path_file_name(&paths.project_path).unwrap_or("").to_string();
         if paths.directory_name == "Behaviors" {
             return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the script directory. Please create a separate parent directory for your script and try again."))
         }
 
-        let try_build_path: PathBuf = paths.script_path.join("Builds").to_path_buf();
+        let try_build_path: PathBuf = paths.project_path.join("Builds").to_path_buf();
         if try_build_path.exists() {
             paths.build_path = try_build_path;
         }
@@ -197,8 +197,8 @@ impl DriftProject {
             directory_name: paths.directory_name,
 
             package_path: paths.package_path,
-            project_path: paths.script_path.clone(),
-            script_path: paths.script_path,
+            project_path: paths.project_path.clone(),
+            script_path: paths.project_path,
             build_path: paths.build_path,
 
             package_info
