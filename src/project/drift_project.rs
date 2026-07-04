@@ -22,7 +22,6 @@ pub struct ProjectPaths {
     pub directory_name: String,
 
     pub package_path: PathBuf,
-    pub project_path: PathBuf,
     pub script_path: PathBuf,
     pub build_path: PathBuf,
 }
@@ -34,13 +33,12 @@ impl ProjectPaths {
             directory_name: String::new(),
 
             package_path: PathBuf::new(),
-            project_path: PathBuf::new(),
             script_path: PathBuf::new(),
             build_path: PathBuf::new(),
         }
     }
 
-    pub fn validate_project_structure(package_path: PathBuf, package_info: &PackageInfo) -> io::Result<ProjectPaths> {
+    pub fn validate_project_structure(package_path: PathBuf) -> io::Result<ProjectPaths> {
         let mut paths: ProjectPaths = ProjectPaths::new();
 
         paths.package_path = package_path;
@@ -58,27 +56,12 @@ impl ProjectPaths {
             return Err(Error::new(ErrorKind::InvalidInput, "package.json is not in a script directory"))
         }
 
-        let script_name = get_path_file_name(&paths.script_path).unwrap_or("");
-        if script_name != package_info.script_name {
-            return Err(Error::new(ErrorKind::InvalidInput, "script directory name does not match package.json 'name' property"))
-        }
-
-        paths.project_path = paths.script_path.parent().unwrap().to_path_buf();
-        if !paths.project_path.exists() {
-            return Err(Error::new(ErrorKind::InvalidInput, "script directory is not in a project directory"))
-        }
-
-        paths.directory_name = get_path_file_name(&paths.project_path).unwrap_or("").to_string();
+        paths.directory_name = get_path_file_name(&paths.script_path).unwrap_or("").to_string();
         if paths.directory_name == "Behaviors" {
-            return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the project directory. Please create a separate parent directory for your script and try again."))
+            return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the script directory. Please create a separate parent directory for your script and try again."))
         }
 
-        paths.project_location = paths.project_path.parent().unwrap().to_path_buf();
-        if !paths.project_location.exists() {
-            return Err(Error::new(ErrorKind::InvalidInput, "project directory is not in a parent directory"))
-        }
-
-        let try_build_path: PathBuf = paths.project_path.join("Builds").to_path_buf();
+        let try_build_path: PathBuf = paths.script_path.join("Builds").to_path_buf();
         if try_build_path.exists() {
             paths.build_path = try_build_path;
         }
@@ -214,7 +197,7 @@ impl DriftProject {
             directory_name: paths.directory_name,
 
             package_path: paths.package_path,
-            project_path: paths.project_path,
+            project_path: paths.script_path.clone(),
             script_path: paths.script_path,
             build_path: paths.build_path,
 
@@ -624,11 +607,10 @@ mod tests {
     fn test_validate_project_structure_with_builds() {
         let author_name = "Me";
         let project_name = "Project";
-        let package_info = create_test_package(author_name, project_name);
 
-        let test_project: TestProject = TestProject::valid(&package_info.author, &package_info.project_name).with_builds();
+        let test_project: TestProject = TestProject::valid(author_name, project_name).with_builds();
 
-        let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
+        let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
         assert!(result.is_ok(), "Result should be Ok. Err: {}", result.unwrap_err());
 
@@ -641,11 +623,10 @@ mod tests {
     fn test_validate_project_structure_without_builds() {
         let author_name = "Me";
         let project_name = "Project";
-        let package_info = create_test_package(author_name, project_name);
 
-        let test_project: TestProject = TestProject::valid(&package_info.author, &package_info.project_name);
+        let test_project: TestProject = TestProject::valid(author_name, project_name).with_builds();
 
-        let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
+        let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
         assert!(result.is_ok(), "Result should be Ok. Err: {}", result.unwrap_err());
 
@@ -655,13 +636,9 @@ mod tests {
 
     #[test]
     fn test_invalid_project_structure_without_builds() {
-        let author_name = "Me";
-        let project_name = "Project";
-        let package_info = create_test_package(author_name, project_name);
-
         let test_project: TestProject = TestProject::invalid();
 
-        let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
+        let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
         assert!(result.is_err());
     }
