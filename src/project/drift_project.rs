@@ -328,7 +328,7 @@ impl DriftProject {
 
             if path.is_dir() {
                 Self::search_notes_recursive(&path)?;
-            } else if path.is_file() {
+            } else if path.is_file() && path.extension().unwrap_or_default().to_str().is_some_and(|ex| ex == "luau") {
                 let should_continue = Self::find_notes_in_file(&path)?;
                 if !should_continue {
                     return Ok(false)
@@ -339,12 +339,19 @@ impl DriftProject {
         Ok(true)
     }
 
-    fn compile_file(original_path: &PathBuf) -> io::Result<()> {
-        let original_file_name = original_path.file_name().unwrap().to_str().unwrap();
-        let temp_file_path = &original_path.parent().unwrap().join(format!("temp_{}", original_file_name));
-        let original_file = File::open(original_path)?;
+    fn compile_file(script_file_path: &PathBuf, compiled_path: &PathBuf) -> io::Result<()> {
+        let script_file_ext = script_file_path.extension().unwrap_or_default().to_str().unwrap_or_default();
+        let script_file_name = script_file_path.file_name().unwrap_or_default().to_str().unwrap_or_default();
 
-        let mut temp_file = File::create(temp_file_path)?;
+        // File is not wanted in release
+        if script_file_ext != "luau" && script_file_name != "package.json" {
+            return Ok(());
+        }
+
+        let compiled_file_path = compiled_path.join(script_file_name);
+        let original_file = File::open(script_file_path)?;
+
+        let mut compiled_file = File::create(&compiled_file_path)?;
 
         let reader = BufReader::new(original_file);
         let mut current_dev_block_start: usize = 0;
@@ -353,7 +360,7 @@ impl DriftProject {
             let line = if let Ok(line) = line {
                 line
             } else {
-                return match fs::remove_file(temp_file_path) {
+                return match fs::remove_file(&compiled_file_path) {
                     Ok(_) => {
                         Err(Error::new(ErrorKind::Other, "Failed to read line"))
                     }
@@ -377,8 +384,8 @@ impl DriftProject {
                 continue
             }
 
-            if let Err(_) = writeln!(temp_file, "{}", line) {
-                return match fs::remove_file(temp_file_path) {
+            if let Err(_) = writeln!(compiled_file, "{}", line) {
+                return match fs::remove_file(&compiled_file_path) {
                     Ok(_) => {
                         Err(Error::new(ErrorKind::Other, "Failed to write line"))
                     }
@@ -391,52 +398,58 @@ impl DriftProject {
 
         if is_in_dev_block {
             // still in dev block after every line has been read means missing end block
-            return match fs::remove_file(temp_file_path) {
+            return match fs::remove_file(&compiled_file_path) {
                 Ok(_) => {
-                    Err(Error::new(ErrorKind::Other, format!("Missing dev block end for dev block at line {} in {}", current_dev_block_start, original_file_name)))
+                    Err(Error::new(ErrorKind::Other, format!("Missing dev block end for dev block at line {} in {}", current_dev_block_start, script_file_name)))
                 }
                 Err(_) => {
-                    Err(Error::new(ErrorKind::Other, format!("Missing dev block end for dev block at line {} in {}. Unable to remove temp file", current_dev_block_start, original_file_name)))
-                }
-            }
-        }
-
-        if let Err(_) = fs::rename(&temp_file_path, &original_path) {
-            return match fs::remove_file(temp_file_path) {
-                Ok(_) => {
-                    Err(Error::new(ErrorKind::Other, "Failed to rename temp file"))
-                }
-                Err(_) => {
-                    Err(Error::new(ErrorKind::Other, "Failed to rename temp file. Unable to remove temp file"))
+                    Err(Error::new(ErrorKind::Other, format!("Missing dev block end for dev block at line {} in {}. Unable to remove temp file", current_dev_block_start, script_file_name)))
                 }
             }
         }
 
         Ok(())
     }
-    fn compile_script_dir_recursive(dir_path: &PathBuf) -> io::Result<()> {
-        for entry_result in fs::read_dir(dir_path)? {
+
+    fn compile_script_dir_recursive(&self, scripts_path: &PathBuf, compiled_path: &PathBuf) -> io::Result<()> {
+        for entry_result in fs::read_dir(scripts_path)? {
             let entry = entry_result?;
             let path = entry.path();
-            if path.is_dir() {
-                Self::compile_script_dir_recursive(&path)?;
+            if path.is_dir() && path != self.build_path {
+                if let Some(dir_name) = path.file_name() {
+                    if dir_name == ".git" {
+                        continue
+                    }
+
+                    let compiled_path: PathBuf = compiled_path.join(dir_name);
+                    if let Err(e) = fs::create_dir(&compiled_path) {
+                        return Err(e);
+                    }
+
+                    self.compile_script_dir_recursive(&path, &compiled_path)?;
+
+                    // Check if dir is empty and delete
+                    if compiled_path.read_dir()?.next().is_none() {
+                        fs::remove_dir(&compiled_path)?;
+                    }
+                } else {
+                    return Err(Error::new(ErrorKind::Other, "Failed to get directory name"));
+                }
             } else if path.is_file() {
-                Self::compile_file(&path)?;
+                Self::compile_file(&path, compiled_path)?;
             }
         }
 
         Ok(())
     }
 
-    fn compile_script(script_dir: &PathBuf, build_dir: &PathBuf) -> io::Result<PathBuf> {
-        let copy_options = CopyOptions::new().overwrite(true);
-        if let Err(e) = fs_extra::dir::copy(script_dir, build_dir, &copy_options) {
-            return Err(Error::new(ErrorKind::Other, format!("{}", e)));
-        };
+    fn compile_script(&self) -> io::Result<PathBuf> {
+        let compiled_script_path = self.build_path.join(&self.project_path.file_name().unwrap());
+        if let Err(e) = fs::create_dir(&compiled_script_path) {
+            return Err(Error::new(ErrorKind::Other, format!("{}", e)))
+        }
 
-        let compiled_script_path = build_dir.join(script_dir.file_name().unwrap());
-
-        Self::compile_script_dir_recursive(&compiled_script_path)?;
+        self.compile_script_dir_recursive(&self.project_path, &compiled_script_path)?;
 
         Ok(compiled_script_path)
     }
@@ -473,7 +486,7 @@ impl DriftProject {
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
-        let zip_archive_content = Self::compile_script(&self.project_path, &self.build_path);
+        let zip_archive_content = self.compile_script();
         if let Err(e) = zip_archive_content {
             error_dialog("Compilation Failure", "Failed to compile script", &e);
             return Err(zip_file_path.clone());
