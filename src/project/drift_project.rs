@@ -518,7 +518,7 @@ mod tests {
         format!("{}.{}", author_name.to_lowercase().replace(" ", ""), project_name.to_lowercase().replace(" ", ""))
     }
 
-    fn create_test_package(author_name: &str, project_name: &str) -> PackageInfo {
+    fn _create_test_package(author_name: &str, project_name: &str) -> PackageInfo {
         let script_name = script_name(author_name, project_name);
 
         PackageInfo {
@@ -541,15 +541,14 @@ mod tests {
     }
 
     impl TestProject {
-        fn valid(author_name: &str, project_name: &str) -> Self {
+        fn valid(project_name: &str) -> Self {
             let temp = tempdir().unwrap();
             let project_location = temp.path();
             let project_path = project_location.join(project_name);
-            let script_path = project_path.join(script_name(author_name, project_name));
 
-            fs::create_dir_all(&script_path).unwrap();
+            fs::create_dir_all(&project_path).unwrap();
 
-            let package_path = script_path.join("package.json");
+            let package_path = project_path.join("package.json");
             fs::write(&package_path, "{}").unwrap();
 
             Self {
@@ -574,7 +573,7 @@ mod tests {
 
             fs::create_dir_all(&project_path).unwrap();
 
-            let package_path = project_path.join("package.json");
+            let package_path = project_path.join("not-package.json");
             fs::write(&package_path, "{}").unwrap();
 
             Self {
@@ -588,10 +587,9 @@ mod tests {
 
     #[test]
     fn test_validate_project_structure_with_builds() {
-        let author_name = "Me";
         let project_name = "Project";
 
-        let test_project: TestProject = TestProject::valid(author_name, project_name).with_builds();
+        let test_project: TestProject = TestProject::valid(project_name).with_builds();
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
@@ -604,10 +602,9 @@ mod tests {
 
     #[test]
     fn test_validate_project_structure_without_builds() {
-        let author_name = "Me";
         let project_name = "Project";
 
-        let test_project: TestProject = TestProject::valid(author_name, project_name).with_builds();
+        let test_project: TestProject = TestProject::valid(project_name);
 
         let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
