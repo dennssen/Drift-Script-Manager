@@ -84,7 +84,6 @@ pub struct DriftProject {
 
     pub package_path: PathBuf,
     pub project_path: PathBuf,
-    pub script_path: PathBuf,
     pub build_path: PathBuf,
 
     pub package_info: PackageInfo,
@@ -106,7 +105,6 @@ impl DriftProject {
 
             package_path: PathBuf::new(),
             project_path: PathBuf::new(),
-            script_path: PathBuf::new(),
             build_path: PathBuf::new(),
 
             package_info: PackageInfo::new()
@@ -150,8 +148,7 @@ impl DriftProject {
     pub fn create_project_files(&mut self, create_data: &CreateProjectData) -> io::Result<()> {
         self.project_path = self.project_location.join(&self.directory_name);
         self.build_path = self.project_path.join("Builds");
-        self.script_path = self.project_path.join(&self.package_info.script_name);
-        self.package_path = self.script_path.join("package.json");
+        self.package_path = self.project_path.join("package.json");
 
         // Create directories
         if self.project_path.exists() {
@@ -161,7 +158,6 @@ impl DriftProject {
         fs::create_dir_all(&self.project_path)?;
 
         fs::create_dir(&self.build_path)?;
-        fs::create_dir(&self.script_path)?;
 
         // Create and write package.json
         let package_json_string = serde_json::to_string_pretty(&self.package_info)?;
@@ -169,7 +165,7 @@ impl DriftProject {
 
         package_file.write_all(package_json_string.as_bytes())?;
 
-        copy_template(&create_data.template, &self.script_path)?;
+        copy_template(&create_data.template, &self.project_path)?;
 
         self.try_write_version();
 
@@ -197,8 +193,7 @@ impl DriftProject {
             directory_name: paths.directory_name,
 
             package_path: paths.package_path,
-            project_path: paths.project_path.clone(),
-            script_path: paths.project_path,
+            project_path: paths.project_path,
             build_path: paths.build_path,
 
             package_info
@@ -230,25 +225,13 @@ impl DriftProject {
         // Search for version in main and update it.
         self.try_write_version();
 
-        // Edit script directory name (if applicable)
-        if self.script_path.file_name().unwrap().to_str().unwrap() == self.package_info.script_name {
-            return Ok(()) // No need to rename directory
-        }
-
-        let new_directory = self.script_path.parent().unwrap().join(&self.package_info.script_name);
-
-        if let Err(_) = fs::rename(&self.script_path, &new_directory) {
-            warn_dialog("Rename Failure", "Failed to rename script directory to script name");
-            return Err(())
-        }
-
         Ok(())
     }
 
     fn try_write_version(&self) {
         if let Err(_) = self.write_version_to_main() {
-            if self.script_path.join("temp_main.luau").exists() {
-                if let Err(_) = fs::remove_file(self.script_path.join("temp_main.luau")) {
+            if self.project_path.join("temp_main.luau").exists() {
+                if let Err(_) = fs::remove_file(self.project_path.join("temp_main.luau")) {
                     warn_dialog("Version Edit Failure", "Failed to edit version number in main.luau\nFailed to delete temp_main.luau\nBuild will continue");
                 } else {
                     warn_dialog("Version Edit Failure", "Failed to edit version number in main.luau\nBuild will continue");
@@ -258,8 +241,8 @@ impl DriftProject {
     }
 
     fn write_version_to_main(&self) -> io::Result<()> {
-        let input_file_path = &self.script_path.join("main.luau");
-        let output_file_path = &self.script_path.join("temp_main.luau");
+        let input_file_path = &self.project_path.join("main.luau");
+        let output_file_path = &self.project_path.join("temp_main.luau");
 
         let file = File::open(input_file_path)?;
         let reader = BufReader::new(file);
@@ -473,7 +456,7 @@ impl DriftProject {
             return Err(zip_file_path.clone());
         }
 
-        match Self::search_notes_recursive(&self.script_path) {
+        match Self::search_notes_recursive(&self.project_path) {
             Ok(should_continue) => {
                 if !should_continue {
                     return Err(zip_file_path.clone());
@@ -490,7 +473,7 @@ impl DriftProject {
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
-        let zip_archive_content = Self::compile_script(&self.script_path, &self.build_path);
+        let zip_archive_content = Self::compile_script(&self.project_path, &self.build_path);
         if let Err(e) = zip_archive_content {
             error_dialog("Compilation Failure", "Failed to compile script", &e);
             return Err(zip_file_path.clone());
@@ -709,7 +692,6 @@ mod tests {
         assert!(project.create_project_files(&create_data).is_ok());
         assert!(project.project_path.exists());
         assert!(project.build_path.exists());
-        assert!(project.script_path.exists());
         assert!(project.package_path.exists());
     }
 }
