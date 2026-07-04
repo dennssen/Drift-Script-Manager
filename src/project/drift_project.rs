@@ -23,7 +23,6 @@ pub struct ProjectPaths {
 
     pub package_path: PathBuf,
     pub project_path: PathBuf,
-    pub script_path: PathBuf,
     pub build_path: PathBuf,
 }
 
@@ -35,12 +34,11 @@ impl ProjectPaths {
 
             package_path: PathBuf::new(),
             project_path: PathBuf::new(),
-            script_path: PathBuf::new(),
             build_path: PathBuf::new(),
         }
     }
 
-    pub fn validate_project_structure(package_path: PathBuf, package_info: &PackageInfo) -> io::Result<ProjectPaths> {
+    pub fn validate_project_structure(package_path: PathBuf) -> io::Result<ProjectPaths> {
         let mut paths: ProjectPaths = ProjectPaths::new();
 
         paths.package_path = package_path;
@@ -53,29 +51,14 @@ impl ProjectPaths {
             return Err(Error::new(ErrorKind::InvalidFilename, "file not called package.json"))
         }
 
-        paths.script_path = paths.package_path.parent().unwrap().to_path_buf();
-        if !paths.script_path.exists() {
-            return Err(Error::new(ErrorKind::InvalidInput, "package.json is not in a script directory"))
-        }
-
-        let script_name = get_path_file_name(&paths.script_path).unwrap_or("");
-        if script_name != package_info.script_name {
-            return Err(Error::new(ErrorKind::InvalidInput, "script directory name does not match package.json 'name' property"))
-        }
-
-        paths.project_path = paths.script_path.parent().unwrap().to_path_buf();
+        paths.project_path = paths.package_path.parent().unwrap().to_path_buf();
         if !paths.project_path.exists() {
-            return Err(Error::new(ErrorKind::InvalidInput, "script directory is not in a project directory"))
+            return Err(Error::new(ErrorKind::InvalidInput, "package.json is not in a script directory"))
         }
 
         paths.directory_name = get_path_file_name(&paths.project_path).unwrap_or("").to_string();
         if paths.directory_name == "Behaviors" {
-            return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the project directory. Please create a separate parent directory for your script and try again."))
-        }
-
-        paths.project_location = paths.project_path.parent().unwrap().to_path_buf();
-        if !paths.project_location.exists() {
-            return Err(Error::new(ErrorKind::InvalidInput, "project directory is not in a parent directory"))
+            return Err(Error::new(ErrorKind::InvalidInput, "'Behaviors' cannot be the script directory. Please create a separate parent directory for your script and try again."))
         }
 
         let try_build_path: PathBuf = paths.project_path.join("Builds").to_path_buf();
@@ -101,7 +84,6 @@ pub struct DriftProject {
 
     pub package_path: PathBuf,
     pub project_path: PathBuf,
-    pub script_path: PathBuf,
     pub build_path: PathBuf,
 
     pub package_info: PackageInfo,
@@ -123,7 +105,6 @@ impl DriftProject {
 
             package_path: PathBuf::new(),
             project_path: PathBuf::new(),
-            script_path: PathBuf::new(),
             build_path: PathBuf::new(),
 
             package_info: PackageInfo::new()
@@ -167,8 +148,7 @@ impl DriftProject {
     pub fn create_project_files(&mut self, create_data: &CreateProjectData) -> io::Result<()> {
         self.project_path = self.project_location.join(&self.directory_name);
         self.build_path = self.project_path.join("Builds");
-        self.script_path = self.project_path.join(&self.package_info.script_name);
-        self.package_path = self.script_path.join("package.json");
+        self.package_path = self.project_path.join("package.json");
 
         // Create directories
         if self.project_path.exists() {
@@ -178,7 +158,6 @@ impl DriftProject {
         fs::create_dir_all(&self.project_path)?;
 
         fs::create_dir(&self.build_path)?;
-        fs::create_dir(&self.script_path)?;
 
         // Create and write package.json
         let package_json_string = serde_json::to_string_pretty(&self.package_info)?;
@@ -186,7 +165,7 @@ impl DriftProject {
 
         package_file.write_all(package_json_string.as_bytes())?;
 
-        copy_template(&create_data.template, &self.script_path)?;
+        copy_template(&create_data.template, &self.project_path)?;
 
         self.try_write_version();
 
@@ -215,7 +194,6 @@ impl DriftProject {
 
             package_path: paths.package_path,
             project_path: paths.project_path,
-            script_path: paths.script_path,
             build_path: paths.build_path,
 
             package_info
@@ -247,25 +225,13 @@ impl DriftProject {
         // Search for version in main and update it.
         self.try_write_version();
 
-        // Edit script directory name (if applicable)
-        if self.script_path.file_name().unwrap().to_str().unwrap() == self.package_info.script_name {
-            return Ok(()) // No need to rename directory
-        }
-
-        let new_directory = self.script_path.parent().unwrap().join(&self.package_info.script_name);
-
-        if let Err(_) = fs::rename(&self.script_path, &new_directory) {
-            warn_dialog("Rename Failure", "Failed to rename script directory to script name");
-            return Err(())
-        }
-
         Ok(())
     }
 
     fn try_write_version(&self) {
         if let Err(_) = self.write_version_to_main() {
-            if self.script_path.join("temp_main.luau").exists() {
-                if let Err(_) = fs::remove_file(self.script_path.join("temp_main.luau")) {
+            if self.project_path.join("temp_main.luau").exists() {
+                if let Err(_) = fs::remove_file(self.project_path.join("temp_main.luau")) {
                     warn_dialog("Version Edit Failure", "Failed to edit version number in main.luau\nFailed to delete temp_main.luau\nBuild will continue");
                 } else {
                     warn_dialog("Version Edit Failure", "Failed to edit version number in main.luau\nBuild will continue");
@@ -275,8 +241,8 @@ impl DriftProject {
     }
 
     fn write_version_to_main(&self) -> io::Result<()> {
-        let input_file_path = &self.script_path.join("main.luau");
-        let output_file_path = &self.script_path.join("temp_main.luau");
+        let input_file_path = &self.project_path.join("main.luau");
+        let output_file_path = &self.project_path.join("temp_main.luau");
 
         let file = File::open(input_file_path)?;
         let reader = BufReader::new(file);
@@ -490,7 +456,7 @@ impl DriftProject {
             return Err(zip_file_path.clone());
         }
 
-        match Self::search_notes_recursive(&self.script_path) {
+        match Self::search_notes_recursive(&self.project_path) {
             Ok(should_continue) => {
                 if !should_continue {
                     return Err(zip_file_path.clone());
@@ -507,7 +473,7 @@ impl DriftProject {
         }
 
         let zip = ZipWriter::new(zip_file.unwrap());
-        let zip_archive_content = Self::compile_script(&self.script_path, &self.build_path);
+        let zip_archive_content = Self::compile_script(&self.project_path, &self.build_path);
         if let Err(e) = zip_archive_content {
             error_dialog("Compilation Failure", "Failed to compile script", &e);
             return Err(zip_file_path.clone());
@@ -552,7 +518,7 @@ mod tests {
         format!("{}.{}", author_name.to_lowercase().replace(" ", ""), project_name.to_lowercase().replace(" ", ""))
     }
 
-    fn create_test_package(author_name: &str, project_name: &str) -> PackageInfo {
+    fn _create_test_package(author_name: &str, project_name: &str) -> PackageInfo {
         let script_name = script_name(author_name, project_name);
 
         PackageInfo {
@@ -575,15 +541,14 @@ mod tests {
     }
 
     impl TestProject {
-        fn valid(author_name: &str, project_name: &str) -> Self {
+        fn valid(project_name: &str) -> Self {
             let temp = tempdir().unwrap();
             let project_location = temp.path();
             let project_path = project_location.join(project_name);
-            let script_path = project_path.join(script_name(author_name, project_name));
 
-            fs::create_dir_all(&script_path).unwrap();
+            fs::create_dir_all(&project_path).unwrap();
 
-            let package_path = script_path.join("package.json");
+            let package_path = project_path.join("package.json");
             fs::write(&package_path, "{}").unwrap();
 
             Self {
@@ -608,7 +573,7 @@ mod tests {
 
             fs::create_dir_all(&project_path).unwrap();
 
-            let package_path = project_path.join("package.json");
+            let package_path = project_path.join("not-package.json");
             fs::write(&package_path, "{}").unwrap();
 
             Self {
@@ -622,13 +587,11 @@ mod tests {
 
     #[test]
     fn test_validate_project_structure_with_builds() {
-        let author_name = "Me";
         let project_name = "Project";
-        let package_info = create_test_package(author_name, project_name);
 
-        let test_project: TestProject = TestProject::valid(&package_info.author, &package_info.project_name).with_builds();
+        let test_project: TestProject = TestProject::valid(project_name).with_builds();
 
-        let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
+        let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
         assert!(result.is_ok(), "Result should be Ok. Err: {}", result.unwrap_err());
 
@@ -639,13 +602,11 @@ mod tests {
 
     #[test]
     fn test_validate_project_structure_without_builds() {
-        let author_name = "Me";
         let project_name = "Project";
-        let package_info = create_test_package(author_name, project_name);
 
-        let test_project: TestProject = TestProject::valid(&package_info.author, &package_info.project_name);
+        let test_project: TestProject = TestProject::valid(project_name);
 
-        let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
+        let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
         assert!(result.is_ok(), "Result should be Ok. Err: {}", result.unwrap_err());
 
@@ -655,13 +616,9 @@ mod tests {
 
     #[test]
     fn test_invalid_project_structure_without_builds() {
-        let author_name = "Me";
-        let project_name = "Project";
-        let package_info = create_test_package(author_name, project_name);
-
         let test_project: TestProject = TestProject::invalid();
 
-        let result = ProjectPaths::validate_project_structure(test_project.package_path, &package_info);
+        let result = ProjectPaths::validate_project_structure(test_project.package_path);
 
         assert!(result.is_err());
     }
@@ -732,7 +689,6 @@ mod tests {
         assert!(project.create_project_files(&create_data).is_ok());
         assert!(project.project_path.exists());
         assert!(project.build_path.exists());
-        assert!(project.script_path.exists());
         assert!(project.package_path.exists());
     }
 }

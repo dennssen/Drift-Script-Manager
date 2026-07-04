@@ -83,7 +83,7 @@ fn set_edit_screen(screen_state: &mut ScreenState, edit_project: &mut Option<Dri
 fn try_get_project() -> Option<DriftProject> {
     let (package_info, package_path) = PackageInfo::get_package_file()?;
 
-    let validate_result = ProjectPaths::validate_project_structure(package_path, &package_info);
+    let validate_result = ProjectPaths::validate_project_structure(package_path);
 
     if let Err(e) = validate_result {
         warn_dialog("File Dialog Failure", e.to_string().as_str());
