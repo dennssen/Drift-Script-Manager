@@ -7,8 +7,12 @@ use crate::managers::data::get_app_data;
 use crate::utils::dialogs::error_dialog;
 use crate::utils::error_helper::json_error_to_io;
 
+pub static PACKAGE_SCHEMA: &'static str = "https://raw.githubusercontent.com/AA-Franz/OD_SpectatorRegistry/refs/heads/main/src/package.schema.json";
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PackageInfo {
+    #[serde(rename = "$schema")]
+    pub schema: String,
     pub author: String,
     #[serde(rename = "displayName")]
     pub project_name: String,
@@ -25,6 +29,7 @@ pub struct PackageInfo {
 impl PackageInfo {
     pub fn new() -> Self {
         Self {
+            schema: String::from(PACKAGE_SCHEMA),
             author: String::new(),
             project_name: String::new(),
             script_name: String::new(),
@@ -91,6 +96,7 @@ mod tests {
     fn test_package_info_from_file() {
         let temp = tempdir().unwrap();
         let test_package = PackageInfo {
+            schema: PACKAGE_SCHEMA.to_string(),
             author: "Me".to_string(),
             project_name: "Project".to_string(),
             script_name: "me.project".to_string(),
