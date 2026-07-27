@@ -24,6 +24,7 @@ pub struct PackageInfo {
     #[serde(rename = "defaultKeybind")]
     pub default_keybind: String,
     pub main: String,
+    pub url: String,
 }
 
 impl PackageInfo {
@@ -37,7 +38,8 @@ impl PackageInfo {
             description: String::new(),
             keywords: Vec::new(),
             main: String::from("main.luau"),
-            default_keybind: String::new()
+            default_keybind: String::new(),
+            url: String::new()
         }
     }
 
@@ -105,6 +107,7 @@ mod tests {
             keywords: Vec::new(),
             default_keybind: String::new(),
             main: "main.luau".to_string(),
+            url: String::new(),
         };
         let test_package_path = temp.path().join("package.json");
         write(&test_package_path, serde_json::to_string(&test_package).unwrap()).unwrap();

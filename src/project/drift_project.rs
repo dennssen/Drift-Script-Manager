@@ -544,7 +544,8 @@ mod tests {
             description: String::new(),
             keywords: Vec::new(),
             default_keybind: String::new(),
-            main: "main.luau".to_string()
+            main: "main.luau".to_string(),
+            url: String::new()
         }
     }
 
