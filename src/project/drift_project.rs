@@ -100,7 +100,7 @@ lazy_static! {
 impl DriftProject {
     pub fn new() -> Self {
         Self {
-            project_location: PathBuf::new(),
+            project_location: Self::try_find_behaviours_directory().unwrap_or_default(),
             directory_name: String::new(),
 
             package_path: PathBuf::new(),
@@ -226,6 +226,17 @@ impl DriftProject {
         self.try_write_version();
 
         Ok(())
+    }
+
+    fn try_find_behaviours_directory() -> Option<PathBuf> {
+        let documents_dir: PathBuf = dirs::document_dir()?;
+        let behaviours_dir: PathBuf = documents_dir.join("Another-Axiom\\A2\\Cameras\\Behaviors");
+
+        if behaviours_dir.exists() {
+            Some(behaviours_dir)
+        } else {
+            None
+        }
     }
 
     fn try_write_version(&self) {
