@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::ffi::CString;
 use std::path::PathBuf;
 use std::ptr::null;
-use imgui::{StyleVar, Ui, Window};
+use imgui::{ItemHoveredFlags, StyleVar, Ui, Window};
 use imgui::sys::{igBeginListBox, igCalcTextSize, igEndListBox, igGetWindowWidth, igSelectable_Bool, ImVec2};
 use rfd::FileDialog;
 use crate::utils::icons;
@@ -37,6 +37,9 @@ pub fn directory_input(ui: &Ui, label: &str, directory_path: &mut PathBuf) {
     ui.disabled(true, || {
         ui.input_text("##Path", &mut path_str.to_string()).build();
     });
+    if ui.is_item_hovered_with_flags(ItemHoveredFlags::ALLOW_WHEN_DISABLED) && !path_str.is_empty() {
+        ui.tooltip_text(path_str);
+    }
 
     ui.same_line();
     if ui.button(icons::FOLDER_OPEN) {
