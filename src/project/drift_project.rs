@@ -526,7 +526,7 @@ mod tests {
     use tempfile::{tempdir, TempDir};
     use std::fs;
     use crate::managers::template::{EmbeddedTemplate, Template};
-    use crate::project::package_info::PACKAGE_SCHEMA;
+    use crate::project::package_info::{EXAMPLE_PACKAGE_URL, PACKAGE_SCHEMA};
 
     fn script_name(author_name: &str, project_name: &str) -> String {
         format!("{}.{}", author_name.to_lowercase().replace(" ", ""), project_name.to_lowercase().replace(" ", ""))
@@ -545,7 +545,7 @@ mod tests {
             keywords: Vec::new(),
             default_keybind: String::new(),
             main: "main.luau".to_string(),
-            url: String::new()
+            url: EXAMPLE_PACKAGE_URL.to_string(),
         }
     }
 

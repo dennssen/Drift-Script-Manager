@@ -8,6 +8,7 @@ use crate::utils::dialogs::error_dialog;
 use crate::utils::error_helper::json_error_to_io;
 
 pub static PACKAGE_SCHEMA: &'static str = "https://raw.githubusercontent.com/AA-Franz/OD_SpectatorRegistry/refs/heads/main/src/package.schema.json";
+pub static EXAMPLE_PACKAGE_URL: &'static str = "https://github.com/user/project.git";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PackageInfo {
@@ -39,7 +40,7 @@ impl PackageInfo {
             keywords: Vec::new(),
             main: String::from("main.luau"),
             default_keybind: String::new(),
-            url: String::new()
+            url: String::from(EXAMPLE_PACKAGE_URL)
         }
     }
 
@@ -107,7 +108,7 @@ mod tests {
             keywords: Vec::new(),
             default_keybind: String::new(),
             main: "main.luau".to_string(),
-            url: String::new(),
+            url: EXAMPLE_PACKAGE_URL.to_string(),
         };
         let test_package_path = temp.path().join("package.json");
         write(&test_package_path, serde_json::to_string(&test_package).unwrap()).unwrap();
